@@ -1,7 +1,8 @@
 ; parameters
 (def template-addr "0x0")
 (def ipfs-runtime "QmSjdpXYK97ULFuryb7eoxCCVUHFQpH4pxUcXbxswiyqwb")
-(def include-cost 0)
+(def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+(def include-cost uint256-max) ; uint256 max - don't allow inclusion
 
 ; contracts abis
 (def template-abi "[{
@@ -52,7 +53,7 @@
   "src/live-chain-binary" (FS.Read :Bytes true) = .immutableData
   "src/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
   ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
-  0 (BigInt) (BigInt.ToBytes) = .includeCost
+  include-cost (BigInt) (BigInt.ToBytes) = .includeCost
   [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
   (Eth.EncodeCall template-abi "upload")
   (ToHex) (Log "Call Input"))
