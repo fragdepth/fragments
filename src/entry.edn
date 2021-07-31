@@ -1,0 +1,491 @@
+; JS side injects a _parameters map here
+; and a _environment string to eval
+
+(if (not (= platform "emscripten"))
+  (do
+    ; perform _parameters & _environment initilization here
+    (def _environment (slurp "mutable.edn"))
+    (def _parameters {:windowTitle "Hello World!"
+                      :windowWidth 1024
+                      :windowHeight 768
+                      :isSVG false
+                      :xrSupported false
+                      :version "v0.1"})
+    (def _Emscripten.Eval Pass)
+    (def _Emscripten.EvalAsync Pass)
+    (def base-folder ""))
+  ; else we are already running on emscripten
+  (do
+    (def base-folder "/.hasten/")))
+
+(def ipfs-gateway "https://ipfs.io")
+
+; ipfs uploader
+(defn _upload-to-ipfs [type type-name]
+  (Chain (str "upload" type-name "-to-ipfs")
+         (let [boundary "----CB-IPFS-Upload-0xC0FFEE"
+               gateways (vector "https://ipfs.infura.io:5001"
+                                "https://ipfs.komputing.org")]
+           (->
+            >= .payload
+            (str "--" boundary
+                 "\r\nContent-Disposition: form-data; name=\"path\"\r\nContent-Type: "
+                 type "\r\n\r\n")
+            (PrependTo .payload)
+            (str "\r\n--" boundary "--")
+            (AppendTo .payload)
+            gateways
+            (TryMany
+             (Chain
+              "IPFS-Upload"
+              >= .gateway
+              "/api/v0/add?pin=true" (AppendTo .gateway)
+              .payload
+              (Http.Post .gateway
+                         :Headers {"Content-Type" (str "multipart/form-data; boundary=" boundary)}
+                         :Timeout 60))
+             :Policy WaitUntil.SomeSuccess)
+            (Take 0) (FromJson) (ExpectTable)
+            (Take "Hash") (ExpectString)))))
+(def upload-bytes-to-ipfs (_upload-to-ipfs "application/octet-stream" "bytes"))
+(def upload-png-to-ipfs (_upload-to-ipfs "image/png" "png"))
+(def upload-webm-to-ipfs (_upload-to-ipfs "video/webm" "webm"))
+
+(defloop upload-screenshot
+  (str base-folder "screenshot.png")
+  (When (FS.IsFile)
+        (->
+         (| (Pause 2.0) ; ensure file is ready
+            (| "globalThis.chainblocks.previewScreenShot()" (_Emscripten.Eval))
+            (FS.Read :Bytes true)
+            (BytesToString)
+            (Do upload-png-to-ipfs) = .hash)
+         (| (FS.Remove))
+         .hash
+         (Stop))))
+
+(defloop upload-video
+  (str base-folder "recorded-canvas-video.webm")
+  (When (FS.IsFile)
+        (->
+         (| (Pause 2.0) ; ensure file is ready
+            (FS.Read :Bytes true)
+            (BytesToString)
+            (Do upload-webm-to-ipfs) = .hash)
+         (| (FS.Remove))
+         .hash
+         (Stop))))
+
+(defchain ugly-shader
+  (Regex.Replace #"\r" "") ; remove \r
+  (Regex.Replace #"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*" "/") ; remove multi line comments
+  (Regex.Replace #"\/\/.*" "") ; remove one line comments
+  (Regex.Replace #"\n\s*\n" "\n") ; remove empty lines
+  (Regex.Replace #"\t+" #" ") ; remove tabs, replace with space
+  (Regex.Replace #"  +" #" ") ; remove more than one space
+  (Regex.Replace #"\( " "(") ; remove useless spaces
+  (Regex.Replace #" \)" ")") ; remove useless spaces
+  (Regex.Replace #"\)\s*\{" ") {") ; remove useless spaces
+  (Regex.Replace #".*$" #"$&\n") ; fix eof
+  )
+
+(defn FColor
+  [r g b a]
+  (Color (* 255 r) (* 255 g) (* 255 b) (* 255 a)))
+
+(def identity
+  [(Float4 1 0 0 0)
+   (Float4 0 1 0 0)
+   (Float4 0 0 1 0)
+   (Float4 0 0 0 1)])
+
+(defblocks applyStyle []
+  (Float2 15 15) (GUI.Style GuiStyle.WindowPadding)
+  5.0 (GUI.Style GuiStyle.WindowRounding)
+  (Float2 5 5) (GUI.Style GuiStyle.FramePadding)
+  (Float2 12 8) (GUI.Style GuiStyle.ItemSpacing)
+  (Float2 8 6) (GUI.Style GuiStyle.ItemInnerSpacing)
+  25.0 (GUI.Style GuiStyle.IndentSpacing)
+  15.0 (GUI.Style GuiStyle.ScrollbarSize)
+  9.0 (GUI.Style GuiStyle.ScrollbarRounding)
+  5.0 (GUI.Style GuiStyle.GrabMinSize)
+  3.0 (GUI.Style GuiStyle.GrabRounding)
+  (FColor 0.80 0.80 0.83 1.00) (GUI.Style GuiStyle.TextColor)
+  (FColor 0.24 0.23 0.29 1.00) (GUI.Style GuiStyle.TextDisabledColor)
+  (FColor 0.06 0.05 0.07 1.00) (GUI.Style GuiStyle.WindowBgColor)
+  (FColor 0.07 0.07 0.09 1.00) (GUI.Style GuiStyle.ChildBgColor)
+  (FColor 0.07 0.07 0.09 1.00) (GUI.Style GuiStyle.PopupBgColor)
+  (FColor 0.80 0.80 0.83 0.88) (GUI.Style GuiStyle.BorderColor)
+  (FColor 0.92 0.91 0.88 0.00) (GUI.Style GuiStyle.BorderShadowColor)
+  (FColor 0.10 0.09 0.12 1.00) (GUI.Style GuiStyle.FrameBgColor)
+  (FColor 0.24 0.23 0.29 1.00) (GUI.Style GuiStyle.FrameBgHoveredColor)
+  (FColor 0.56 0.56 0.58 1.00) (GUI.Style GuiStyle.FrameBgActiveColor)
+  (FColor 0.10 0.09 0.12 1.00) (GUI.Style GuiStyle.TitleBgColor)
+  (FColor 1.00 0.98 0.95 0.75) (GUI.Style GuiStyle.TitleBgCollapsedColor)
+  (FColor 0.07 0.07 0.09 1.00) (GUI.Style GuiStyle.TitleBgActiveColor)
+  (FColor 0.10 0.09 0.12 1.00) (GUI.Style GuiStyle.MenuBarBgColor)
+  (FColor 0.10 0.09 0.12 1.00) (GUI.Style GuiStyle.ScrollbarBgColor)
+  (FColor 0.80 0.80 0.83 0.31) (GUI.Style GuiStyle.ScrollbarGrabColor)
+  (FColor 0.56 0.56 0.58 1.00) (GUI.Style GuiStyle.ScrollbarGrabHoveredColor)
+  (FColor 0.06 0.05 0.07 1.00) (GUI.Style GuiStyle.ScrollbarGrabActiveColor)
+  (FColor 0.80 0.80 0.83 0.31) (GUI.Style GuiStyle.CheckMarkColor)
+  (FColor 0.80 0.80 0.83 0.31) (GUI.Style GuiStyle.SliderGrabColor)
+  (FColor 0.06 0.05 0.07 1.00) (GUI.Style GuiStyle.SliderGrabActiveColor)
+  (FColor 0.10 0.09 0.12 1.00) (GUI.Style GuiStyle.ButtonColor)
+  (FColor 0.24 0.23 0.29 1.00) (GUI.Style GuiStyle.ButtonHoveredColor)
+  (FColor 0.56 0.56 0.58 1.00) (GUI.Style GuiStyle.ButtonActiveColor)
+  (FColor 0.10 0.09 0.12 1.00) (GUI.Style GuiStyle.HeaderColor)
+  (FColor 0.56 0.56 0.58 1.00) (GUI.Style GuiStyle.HeaderHoveredColor)
+  (FColor 0.06 0.05 0.07 1.00) (GUI.Style GuiStyle.HeaderActiveColor)
+  (FColor 0.00 0.00 0.00 0.00) (GUI.Style GuiStyle.ResizeGripColor)
+  (FColor 0.56 0.56 0.58 1.00) (GUI.Style GuiStyle.ResizeGripHoveredColor)
+  (FColor 0.06 0.05 0.07 1.00) (GUI.Style GuiStyle.ResizeGripActiveColor)
+  (FColor 0.40 0.39 0.38 0.63) (GUI.Style GuiStyle.PlotLinesColor)
+  (FColor 0.25 1.00 0.00 1.00) (GUI.Style GuiStyle.PlotLinesHoveredColor)
+  (FColor 0.40 0.39 0.38 0.63) (GUI.Style GuiStyle.PlotHistogramColor)
+  (FColor 0.25 1.00 0.00 1.00) (GUI.Style GuiStyle.PlotHistogramHoveredColor)
+  (FColor 0.25 1.00 0.00 0.43) (GUI.Style GuiStyle.TextSelectedBgColor))
+
+(defloop screenshot-grab-upload
+  ; pause a bit on top to allow first iteration
+  (Pause 2.0)
+  ; wait JS side indefinitely here
+  "globalThis.chainblocks.screenShotPromise" (_Emscripten.EvalAsync)
+  ; ok we got something, let's do our job
+  "globalThis.chainblocks.setCanUpload(false)" (_Emscripten.Eval)
+  (str base-folder "screenshot.png") (GFX.Screenshot)
+  (Msg "screenshot requested")
+  (Detach upload-screenshot)
+  (Wait upload-screenshot) >= .cid
+  "globalThis.chainblocks.setScreenshotCID(\"" (PrependTo .cid) "\")" (AppendTo .cid)
+  .cid (_Emscripten.Eval)
+  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
+
+(defloop video-upload
+  ; pause a bit on top to allow first iteration
+  (Pause 2.0)
+  ; wait JS side indefinitely here
+  "window.chainblocks.videoCapturePromise" (_Emscripten.EvalAsync)
+  ; ok we got something, let's do our job
+  "globalThis.chainblocks.setCanUpload(false)" (_Emscripten.Eval)
+  (Detach upload-video)
+  (Wait upload-video) >= .cid
+  "globalThis.chainblocks.setVideoCID(\"" (PrependTo .cid) "\")" (AppendTo .cid)
+  .cid (_Emscripten.Eval)
+  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
+
+(def Main
+  (Chain
+   "Main" :Looped :LStack
+   ; try load a uri base64 compressed code string
+   (Setup
+    (str base-folder "binary-script")
+    (When
+     (FS.IsFile)
+     (-> (FS.Read :Bytes true)
+         (Brotli.Decompress)
+         (FromBytes) (ExpectString) = .code
+         (str base-folder "binary-script-unpacked")
+         (FS.Write .code :Overwrite true)
+         ; also check we expect an environment to unpack
+         (str base-folder "binary-environment")
+         (If (FS.IsFile)
+             (-> (FS.Read :Bytes true)
+                 (Brotli.Decompress)
+                 (FromBytes) (ExpectTable) (ToJson) = .jenv
+                 (str base-folder "binary-environment-unpacked")
+                 (FS.Write .jenv :Overwrite true))
+             (-> "No environment found"
+                 (Fail)))
+         "globalThis.chainblocks.ethScriptChanged()"
+         (_Emscripten.Eval)
+         (Stop))))
+   ; our main routine, manage a bgfx window and a chain loader
+   (GFX.MainWindow
+    :Title (get _parameters :windowTitle)
+    :Width (get _parameters :windowWidth) :Height (get _parameters :windowHeight)
+    :ClearColor (Color 7 7 7 255)
+    ; prefer doing fullscreen setup JS side
+    :Contents
+    (->
+     (Setup
+      (applyStyle))
+     ; branch some tasks
+    ;;  (if (not (get _parameters :isSVG))
+    ;;    (Branch [screenshot-grab-upload video-upload]))
+     ; define out shader cache at this top level
+     ; so to persist when user chain is reloaded
+     (Table .shaders-cache)
+     (Maybe
+      (ChainLoader
+       (Chain*
+        (str base-folder "immutable.edn")
+        ; bootstrap code to inject into the environment
+        `(do
+           ; read and eval environment
+           (try*
+            (eval (read-string (str "(do " ~_environment "nil)")))
+            (catch* err (prn (str "Failed to load environment with error: " err))))
+           ; setup some constants
+           (def Canvas-Width ~(get _parameters :windowWidth))
+           (def Canvas-Height ~(get _parameters :windowHeight))
+           (def XR? ~(get _parameters :xrSupported))
+           (def identity ~identity)
+           ; utility to crypto verify bytes
+           (defn verify-bytes-hash [type kkhash]
+             (if (not (nil? (first kkhash)))
+               (->
+                (Hash.Keccak-256)
+                ; take 20 bytes like ETH
+                (ToHex) (Slice :From 26) >= .res
+                "0x" (PrependTo .res) .res
+                (When (IsNot (first kkhash))
+                      (-> (Log "Wrong hash")
+                          (str type " crypto-hash verification failed")
+                          (Fail))))))
+           ; ipfs loader to embedded inside scripts
+           (defn load-ipfs [hash & kkhash]
+             (let [node (Node)
+                   chain (Chain "downloader"
+                                ; this is text code
+                                nil (Http.Get (str ~ipfs-gateway "/ipfs/" hash) :Timeout 60) (FromJson) (ExpectTable) = .json
+                                .json (Take "code") (ExpectString) >= .source-code
+                                (verify-bytes-hash "IPFS Script" kkhash)
+                                ; ignore environment
+                                "(chainify [" (PrependTo .source-code)
+                                "])" (AppendTo .source-code)
+                                .source-code)
+                   code (pr-str (do
+                                  (schedule node chain)
+                                  (run node 0.1)
+                                  ; stop returns the text code
+                                  (stop chain)))]
+               (eval (read-string code))))
+           ; shader compiler runner utility
+           (defn __make-shader []
+             (let [shaderc
+                   (fn [varying code type]
+                     (->
+                      varying (Set "shaderc-table" "varyings")
+                      code (Set "shaderc-table" "shader_code")
+                      (Clear .params)
+                      "-f" >> .params
+                      "shaders/tmp/shader.txt"  >> .params
+                      "-o" >> .params
+                      "shaders/tmp/shader.bin" >> .params
+                      "--varyingdef" >> .params
+                      "shaders/tmp/varying.txt" >> .params
+                      "--platform" >> .params
+                      "asm.js" >> .params
+                      "-p" >> .params
+                      "300_es" >> .params
+                      "--type" >> .params
+                      type >> .params
+                      "-i" >> .params
+                      "shaders/include" >> .params
+                      .params (Set "shaderc-table" "params")
+                      "globalThis.chainblocks.compileShaderFromObject(" > .js
+                      .shaderc-table (ToJson) (AppendTo .js)
+                      ")" (AppendTo .js)
+                      .js (_Emscripten.EvalAsync)
+                      (FromJson) (ExpectTable) > .json-output
+                      (Maybe (-> (Take "bytecode")
+                                 (ExpectIntSeq)
+                                 (IntsToBytes))
+                             (-> (Take "stdout")
+                                 (ExpectString) = .stdout
+                                 (Count .stdout) (WhenNot (Is 0) (-> .stdout (Log)))
+                                 .json-output
+                                 (Take "stderr")
+                                 (ExpectString) = .stderr
+                                 (Count .stderr) (WhenNot (Is 0) (-> .stderr (Log)))
+                                 "Shader compilation failed" (Fail))
+                             :Silent true)))]
+               (Chain
+                "shader-compiler"
+                (Input) (Take 0) >= .varying
+                (Input) (Take 1) >= .vs-code
+                (Input) (Take 2) >= .fs-code
+                "" >= .js ; avoid warning caused by shaderc
+                {} >= .json-output ; avoid warning caused by shaderc
+                (shaderc .varying .vs-code "v") = .vs-bytes
+                (shaderc .varying .fs-code "f") = .fs-bytes
+                (GFX.Shader :VertexShader .vs-bytes :PixelShader .fs-bytes))))
+
+           (defn __ipfs-load-cached [hash full]
+             (->
+              (Maybe (->
+                      (ReadFile (str ~base-folder "ipfs-cache/" hash))
+                      (if full (ExpectTable) (ExpectBytes)))
+                     (-> ; download worst case scenario
+                      hash (Log "Downloading")
+                      nil (Http.Get (str ~ipfs-gateway "/ipfs/" hash)
+                                    :Bytes true
+                                    :FullResponse full
+                                    :Timeout 60)
+                      (WriteFile (str ~base-folder "ipfs-cache/" hash)))
+                     :Silent true)))
+           (if (= platform "emscripten")
+             ; emscripten shader compiler
+             (defn Shader [name varying vs-code fs-code]
+               (let [hash (str name "-hash")
+                     shader (str name "-shader")
+                     sc (__make-shader)
+                     loader (Chain (str name "-compiler")
+                                   varying >> .Shader-args
+                                   vs-code >> .Shader-args
+                                   fs-code >> .Shader-args
+                                   .Shader-args (Hash) >= .shader-hash
+                                   (Get .shaders-cache hash :Default 0)
+                                   (If (IsNot .shader-hash)
+                                       (-> (Msg (str "compiling shader " name))
+                                           .Shader-args (Do sc)
+                                           ; cache the shader as well
+                                           (Set .shaders-cache shader))
+                                       (-> (Get .shaders-cache shader)
+                                           (ExpectLike sc))) = .shader
+                                   .shader-hash (Set .shaders-cache hash)
+                                   .shader)]
+                 ; replace with detach and wait when we can share context
+                 ; in order to allow chain cleanup
+                 (Setup (Do loader) = name)))
+             ; native platforms shader compiler
+             (defn Shader [name varying vs-code fs-code]
+               (Setup
+                {"varyings" varying "code" vs-code "defines" [""]}
+                (GFX.CompileShader ShaderType.Vertex) = .vs-bytes
+                {"varyings" varying "code" fs-code "defines" [""]}
+                (GFX.CompileShader ShaderType.Pixel) = .fs-bytes
+                (GFX.Shader :VertexShader .vs-bytes :PixelShader .fs-bytes) = name)))
+
+           ; model loader from the ipfs
+           (defn Model [name hash & kkhash]
+             (let [loader (Chain (str name "-loader")
+                                 (__ipfs-load-cached hash false) = .model-data
+                                 (verify-bytes-hash "Model" kkhash)
+                                 ".gltf-model.glb" (FS.Write .model-data :Overwrite true)
+                                 (GLTF.Load))]
+               ; replace with detach and wait when we can share context
+               ; in order to allow chain cleanup
+               (Setup (Do loader) = name)))
+           ; texture loader from the ipfs
+           (defn Texture [name hash & kkhash]
+             (let [loader (Chain (str name "-loader")
+                                 (__ipfs-load-cached hash true)
+                                 (| (Take "body") (ExpectBytes) = .texture-data
+                                    (verify-bytes-hash "Texture" kkhash))
+                                 (Take "headers") (ExpectTable) (Take "content-type") (ExpectString)
+                                 (Match (vector "image/png" (-> ".texture.png")
+                                                "image/jpeg" (-> ".texture.jpg")
+                                                nil (-> "Image format not supported"
+                                                        (Fail)))
+                                        :Passthrough false) = .texture-name
+                                 (FS.Write .texture-data :Overwrite true)
+                                 (LoadImage .texture-name) (GFX.Texture2D))]
+               ; replace with detach and wait when we can share context
+               ; in order to allow chain cleanup
+               (Setup (Do loader) = name)))))
+       :OnReload
+       ; compress source to url format
+       (->
+        ; do some reflection to evaluate the chain
+        ; mark as tainted if we access the internet
+        (| (Reflect.Blocks)
+           (ForEach
+            (->
+             (Reflect.Name)
+             (Match ["Http.Get" (-> true = .taint)
+                     "Http.Head" (-> true = .taint)
+                     "Http.Post" (-> true = .taint)
+                     "Http.Put" (-> true = .taint)
+                     "Http.Patch" (-> true = .taint)
+                     "Http.Delete" (-> true = .taint)
+                     nil nil]))))
+        .taint ?? false
+        (Match [true (-> "globalThis.chainblocks.tainted = true" (_Emscripten.Eval))
+                false (-> "globalThis.chainblocks.tainted = false" (_Emscripten.Eval))])
+        ; unlock the next update
+        "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)
+        ; source
+        (str base-folder "immutable.edn")
+        (When
+         (FS.IsFile)
+         (->
+          ; compress the bytes as they are, we need to hash properly
+          (FS.Read)
+          (EDN.Uglify
+                     ; hooks
+           ["Shader" ; minimize shaders
+            (->
+             ; shaders might be complex and templated/macro etc
+             ; so just try if this works, if not pass the original
+             = .sparams
+             (Maybe
+              (->
+               .sparams (Take 0) (ExpectString) >> .sres ; Shader
+               .sparams (Take 1) (ExpectString) >> .sres ; var name
+               .sparams (Take 2) (ExpectString) >> .sres ; varyings
+               .sparams (Take 3) (ExpectString) (Do ugly-shader) >> .sres
+               .sparams (Take 4) (ExpectString) (Do ugly-shader) >> .sres
+               .sres)
+              (->
+               .sparams)
+              :Silent true))]) = .ugly-code
+          ; enviruments are not hashed here, so we can add structured data
+          ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
+          (get _parameters :windowTitle) (Set .environment "t")
+          (get _parameters :windowWidth) (Set .environment "w")
+          (get _parameters :windowHeight) (Set .environment "h")
+          (get _parameters :version) (Set .environment "v")
+          _environment (EDN.Uglify) (Set .environment "e")
+          ; compress and write
+          .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env
+          .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes
+          (Sub (->
+                (Await (->
+                        (str base-folder "live-chain-binary")
+                        (FS.Write .compressed-bytes :Overwrite true)
+                        (str base-folder "live-chain-env-binary")
+                        (FS.Write .compressed-env :Overwrite true)
+                        .compressed-bytes
+                        (Hash.Keccak-256)
+                        ; take 20 bytes like ETH
+                        (ToHex) (Slice :From 26) >= .eth-id
+                        "0x" (PrependTo .eth-id)
+                        (str base-folder "live-chain-eth-id")
+                        (FS.Write .eth-id :Overwrite true)))
+                "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
+          (Count .compressed-bytes) (Log "compressed source size")
+          (Count .compressed-env) (Log "compressed env size"))))
+       :OnError
+       (-> ; unlock the next update
+        "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)))
+      ; if chain fails pause a bit
+      (->
+       (Pause 2.0)))))))
+
+(if (= platform "emscripten")
+  (do
+    ; this one is ticked and scheduled from the JS side
+    (set-global-chain Main)
+    (decompress-strings)
+    (let [Root (Node)
+          blocks-info
+          (let [info (map (fn* [name] {:name name :info (info name)}) (blocks))]
+            (pr-str info))]
+      (schedule
+       Root
+       (Chain
+        "fill-blocks-info"
+        ; write blocks info
+        (str base-folder "blocks-info")
+        (FS.Write blocks-info)))
+      (run Root)))
+  ; else
+  (do
+    (println "Starting")
+    (defnode Root)
+    (schedule Root Main)
+    (run Root 0.016666666666667)))
+
+

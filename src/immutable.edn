@@ -1,0 +1,20 @@
+; setup resources
+(Setup
+  ; include a gltf model from ipfs
+ (Model .scan "QmWwLhts2q2a17YWV3hzsvipBeeUXZ8roC3UrG8CjUxjEo")
+ (Float3 100 100 100) (Math.Scaling) = .s
+ (Float3 0 -5 -15) (Math.Translation) = .t
+ 70.0 (Math.DegreesToRadians) (Math.AxisAngleY) (Math.Rotation) = .r
+ .t (Math.MatMul .r) (Math.MatMul .s) = .p)
+
+(defn render [] (-> .p (GLTF.Draw .scan)))
+
+(if XR?
+    ; if XR just render, there is no camera.. HMD controls projections
+  (-> (XR.Render (-> (render))))
+    ; if not XR do some dolly orbiting
+  (-> (Time.Now) (Math.Cos) (Math.AxisAngleY) (Math.Rotation) = .cam-r
+      .cam-r (Math.MatMul (Float4 0 10 10 1)) (ToFloat3) = .cam-p
+      {"Position" .cam-p
+       "Target" (Float3 0 -1 -15)} (GFX.Camera)
+      (render)))

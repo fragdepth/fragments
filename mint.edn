@@ -1,0 +1,49 @@
+; parameters
+(def template-addr "0x0")
+(def ipfs-runtime "")
+(def include-cost 0)
+
+; contracts abis
+(def template-abi "{
+      \"inputs\": [
+        {
+          \"internalType\": \"bytes\",
+          \"name\": \"immutableData\",
+          \"type\": \"bytes\"
+        },
+        {
+          \"internalType\": \"bytes\",
+          \"name\": \"mutableData\",
+          \"type\": \"bytes\"
+        },
+        {
+          \"internalType\": \"bytes32\",
+          \"name\": \"ipfsRuntime\",
+          \"type\": \"bytes32\"
+        },
+        {
+          \"internalType\": \"uint160[]\",
+          \"name\": \"references\",
+          \"type\": \"uint160[]\"
+        },
+        {
+          \"internalType\": \"bytes32[]\",
+          \"name\": \"storageCids\",
+          \"type\": \"bytes32[]\"
+        },
+        {
+          \"internalType\": \"uint64[]\",
+          \"name\": \"storageSizes\",
+          \"type\": \"uint64[]\"
+        },
+        {
+          \"internalType\": \"uint256\",
+          \"name\": \"includeCost\",
+          \"type\": \"uint256\"
+        }
+      ],
+      \"name\": \"upload\",
+      \"outputs\": [],
+      \"stateMutability\": \"nonpayable\",
+      \"type\": \"function\"
+    }")
