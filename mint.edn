@@ -1,5 +1,4 @@
 ; parameters
-(def template-addr "0x0")
 (def ipfs-runtime "QmSjdpXYK97ULFuryb7eoxCCVUHFQpH4pxUcXbxswiyqwb")
 (def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 (def include-cost uint256-max) ; uint256 max - don't allow inclusion

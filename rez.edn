@@ -1,0 +1,64 @@
+; parameters
+(def template-hash (slurp "src/live-chain-eth-id"))
+(def token-name "My Infinite Fragment")
+(def token-symbol "INFF")
+(def unique true)
+(def uint96-max "0xffffffffffffffffffffffffffffffffffffffff")
+(def max-supply uint96-max) ; mint tokens forever
+
+; contracts abis
+(def template-abi "[{
+      \"inputs\": [
+        {
+          \"internalType\": \"uint160\",
+          \"name\": \"templateHash\",
+          \"type\": \"uint160\"
+        },
+        {
+          \"internalType\": \"string\",
+          \"name\": \"tokenName\",
+          \"type\": \"string\"
+        },
+        {
+          \"internalType\": \"string\",
+          \"name\": \"tokenSymbol\",
+          \"type\": \"string\"
+        },
+        {
+          \"internalType\": \"bool\",
+          \"name\": \"unique\",
+          \"type\": \"bool\"
+        },
+        {
+          \"internalType\": \"uint96\",
+          \"name\": \"maxSupply\",
+          \"type\": \"uint96\"
+        }
+      ],
+      \"name\": \"rez\",
+      \"outputs\": [
+        {
+          \"internalType\": \"address\",
+          \"name\": \"entity\",
+          \"type\": \"address\"
+        },
+        {
+          \"internalType\": \"address\",
+          \"name\": \"vault\",
+          \"type\": \"address\"
+        }
+      ],
+      \"stateMutability\": \"nonpayable\",
+      \"type\": \"function\"
+    }]")
+
+(defchain minter
+  template-hash (HexToBytes) = .templateHash
+  max-supply (BigInt) (BigInt.ToBytes) = .maxSupply
+  [.templateHash token-name token-symbol unique .maxSupply]
+  (Eth.EncodeCall template-abi "rez")
+  (ToHex) (Log "Call Input"))
+
+(defnode main)
+(schedule main minter)
+(run main)
