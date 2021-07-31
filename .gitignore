@@ -1,7 +1,7 @@
 src/shaders
 src/ipfs-cache
 src/.gltf-model.glb
-src/chainblocks.log
 src/live-chain-binary
 src/live-chain-env-binary
 src/live-chain-eth-id
+chainblocks.log

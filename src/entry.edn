@@ -9,8 +9,7 @@
                       :windowWidth 1024
                       :windowHeight 768
                       :isSVG false
-                      :xrSupported false
-                      :version "v0.1"})
+                      :xrSupported false})
     (def _Emscripten.Eval Pass)
     (def _Emscripten.EvalAsync Pass)
     (def base-folder ""))
@@ -436,7 +435,6 @@
           (get _parameters :windowTitle) (Set .environment "t")
           (get _parameters :windowWidth) (Set .environment "w")
           (get _parameters :windowHeight) (Set .environment "h")
-          (get _parameters :version) (Set .environment "v")
           _environment (EDN.Uglify) (Set .environment "e")
           ; compress and write
           .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env
