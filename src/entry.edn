@@ -14,7 +14,8 @@
                       :windowHeight 768
                       :isSVG false
                       :xrSupported false
-                      :gatewayURL "https://cloudflare-eth.com"})
+                      ;; :gatewayURL "https://cloudflare-eth.com"
+                      :gatewayURL "https://goerli.infura.io/v3/0d56b4fd3da6485a94148cbddd2b1f00"})
     (def _Emscripten.Eval Pass)
     (def _Emscripten.EvalAsync Pass)
     (def base-folder ""))
@@ -23,6 +24,7 @@
     (def base-folder "/.hasten/")))
 
 (def ipfs-gateway "https://ipfs.io")
+(def fragments "0xdddd4603dab460e3a9dd9e0b111ea3baf0d6b8ee")
 
 (def frag-abi "[{
       \"inputs\": [
@@ -51,6 +53,48 @@
         }
       ],
       \"stateMutability\": \"view\",
+      \"type\": \"function\"
+    },{
+      \"inputs\": [
+        {
+          \"internalType\": \"bytes\",
+          \"name\": \"immutableData\",
+          \"type\": \"bytes\"
+        },
+        {
+          \"internalType\": \"bytes\",
+          \"name\": \"mutableData\",
+          \"type\": \"bytes\"
+        },
+        {
+          \"internalType\": \"bytes32\",
+          \"name\": \"ipfsRuntime\",
+          \"type\": \"bytes32\"
+        },
+        {
+          \"internalType\": \"uint160[]\",
+          \"name\": \"references\",
+          \"type\": \"uint160[]\"
+        },
+        {
+          \"internalType\": \"bytes32[]\",
+          \"name\": \"storageCids\",
+          \"type\": \"bytes32[]\"
+        },
+        {
+          \"internalType\": \"uint64[]\",
+          \"name\": \"storageSizes\",
+          \"type\": \"uint64[]\"
+        },
+        {
+          \"internalType\": \"uint256\",
+          \"name\": \"includeCost\",
+          \"type\": \"uint256\"
+        }
+      ],
+      \"name\": \"upload\",
+      \"outputs\": [],
+      \"stateMutability\": \"nonpayable\",
       \"type\": \"function\"
     }]")
 
@@ -295,29 +339,67 @@
                                   ; stop returns the text code
                                   (stop chain)))]
                (eval (read-string code))))
+           ; eth block fetcher - to fetch call datas of fragment template upload calls
+           (defchain fetch-block-data
+             (| (Take "block-number") = .block-number)
+             (| (Take "frag-hash") = .frag-hash)
+             {"jsonrpc" "2.0"
+              "method" "eth_getBlockByNumber"
+              "params" [.block-number true]
+              "id" 1} (ToJson)
+             (Http.Post ~(get _parameters :gatewayURL)
+                        :Timeout 60) (FromJson)
+             (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq) = .transactions
+             (Sequence .result :Types Type.Bytes)
+             .transactions
+             (ForEach
+              (-> (ExpectTable)
+                  (| (Take "to") = .to)
+                  (| (Take "input") = .input)
+                  .to (When (Is ~fragments)
+                            (->
+                             .input (ExpectString) (Slice :From 10)
+                             ; decode input data to get hash, that's why true as 3rd param
+                             (Eth.DecodeCall ~frag-abi "upload" true)
+                             (| (Take 0) (ExpectBytes) = .immutableData)
+                             (| (Take 1) (ExpectBytes) = .mutableData)
+                             .immutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
+                             (When (Is .frag-hash) (-> .immutableData >> .result
+                                                       .mutableData >> .result
+                                                       (Return)))))))
+             .result)
+           ; utility function to load from chain or cache fragments
            (defn __frag-load-cached [hash]
              (->
-              (Maybe (->
-                      (ReadFile (str ~base-folder "frag-cache/" hash))
-                      (ExpectBytes)))
-              (-> ; download worst case scenario
-               hash (Log "Downloading")
-                      ;; {"jsonrpc" "2.0"
-                      ;;  "method" "eth_getBlockByNumber"
-                      ;;  "params" ["0xf4240" true]
-                      ;;  "id" 1} (ToJson)
-               hash (FromBase58) >> .hashBytes
-               .hashBytes (Eth.EncodeCall ~frag-abi "dataOf") (ToHex) = .callData
-               {"jsonrpc" "2.0"
-                "method" "eth_call"
-                "params" [{"data" .callData} "latest"]
-                "id" 1} (ToJson)
-               (Http.Post ~(get _parameters :gatewayURL)
-                          :Bytes true
-                          :Timeout 60)
-               (Log)
-               (WriteFile (str ~base-folder "frag-cache/" hash)))
-              :Silent true))
+              (Maybe
+               (->
+                (ReadFile (str ~base-folder "frag-cache/" hash))
+                (ExpectBytesSeq))
+               (-> ; download worst case scenario
+                hash (Log "Downloading")
+                hash (FromBase58) >> .hashBytes
+                .hashBytes (Eth.EncodeCall ~frag-abi "dataOf") (ToHex) = .callData
+                ~fragments = .fragments
+                {"jsonrpc" "2.0"
+                 "method" "eth_call"
+                 "params" [{"to" .fragments "data" .callData} "latest"]
+                 "id" 1} (ToJson)
+                (Http.Post ~(get _parameters :gatewayURL)
+                           :Timeout 60) (FromJson) (ExpectTable) (Take "result") (ExpectString)
+                (Eth.DecodeCall ~frag-abi "dataOf")
+                (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
+                (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
+                (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
+                ; fetch block with immutable data
+                {"block-number" .immutable-block
+                 "frag-hash" hash} (Do fetch-block-data) = .first-result
+                .mutable-block (If (Is 0)
+                                   (-> .first-result)
+                                   (->
+                                    ; TODO, fetch env hash and find new env from "update" call
+                                    .first-result))
+                (WriteFile (str ~base-folder "frag-cache/" hash)))
+               :Silent true)))
            (defn frag [hash & args]
              (let [load-env (if (not (nil? (first args))) (first args) false)
                    params (if (not (nil? (first (rest args)))) (first (rest args)) {})]
@@ -521,8 +603,9 @@
                         ; take 20 bytes like ETH
                         (ToHex) (Slice :From 26) >= .eth-id
                         "0x" (PrependTo .eth-id)
+                        .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
                         (str base-folder "live-chain-eth-id")
-                        (FS.Write .eth-id :Overwrite true)))
+                        (FS.Write .b58-eth-id :Overwrite true)))
                 "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
           (Count .compressed-bytes) (Log "compressed source size")
           (Count .compressed-env) (Log "compressed env size"))))
