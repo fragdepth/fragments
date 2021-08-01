@@ -5,17 +5,18 @@
 ; JS side injects a _parameters map here
 ; and a _environment string to eval
 
+(def args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
+
 (if (not (= platform "emscripten"))
   (do
     ; perform _parameters & _environment initilization here
     (def _environment (slurp "mutable.edn"))
-    (def _parameters {:windowTitle "Hello World!"
-                      :windowWidth 1024
-                      :windowHeight 768
+    (def _parameters {:windowTitle (if (contains? args :title) (get args :title) "Fragment")
+                      :windowWidth (if (contains? args :width) (get args :width) 1024)
+                      :windowHeight (if (contains? args :height) (get args :height) 768)
                       :isSVG false
                       :xrSupported false
-                      ;; :gatewayURL "https://cloudflare-eth.com"
-                      :gatewayURL "https://goerli.infura.io/v3/0d56b4fd3da6485a94148cbddd2b1f00"})
+                      :gatewayURL (if (contains? args :gateway) (get args :gateway) "https://cloudflare-eth.com")})
     (def _Emscripten.Eval Pass)
     (def _Emscripten.EvalAsync Pass)
     (def base-folder ""))
@@ -26,96 +27,119 @@
 (def ipfs-gateway "https://ipfs.io")
 (def fragments "0xdddd4603dab460e3a9dd9e0b111ea3baf0d6b8ee")
 
-(def frag-abi "[{
-      \"inputs\": [
-        {
-          \"internalType\": \"uint160\",
-          \"name\": \"templateHash\",
-          \"type\": \"uint160\"
-        }
-      ],
-      \"name\": \"dataOf\",
-      \"outputs\": [
-        {
-          \"internalType\": \"uint64\",
-          \"name\": \"immutableData\",
-          \"type\": \"uint64\"
-        },
-        {
-          \"internalType\": \"uint64\",
-          \"name\": \"mutableData\",
-          \"type\": \"uint64\"
-        },
-        {
-          \"internalType\": \"bytes32\",
-          \"name\": \"ipfsRuntime\",
-          \"type\": \"bytes32\"
-        }
-      ],
-      \"stateMutability\": \"view\",
-      \"type\": \"function\"
-    },{
-      \"inputs\": [
-        {
-          \"internalType\": \"bytes\",
-          \"name\": \"immutableData\",
-          \"type\": \"bytes\"
-        },
-        {
-          \"internalType\": \"bytes\",
-          \"name\": \"mutableData\",
-          \"type\": \"bytes\"
-        },
-        {
-          \"internalType\": \"bytes32\",
-          \"name\": \"ipfsRuntime\",
-          \"type\": \"bytes32\"
-        },
-        {
-          \"internalType\": \"uint160[]\",
-          \"name\": \"references\",
-          \"type\": \"uint160[]\"
-        },
-        {
-          \"internalType\": \"bytes32[]\",
-          \"name\": \"storageCids\",
-          \"type\": \"bytes32[]\"
-        },
-        {
-          \"internalType\": \"uint64[]\",
-          \"name\": \"storageSizes\",
-          \"type\": \"uint64[]\"
-        },
-        {
-          \"internalType\": \"uint256\",
-          \"name\": \"includeCost\",
-          \"type\": \"uint256\"
-        }
-      ],
-      \"name\": \"upload\",
-      \"outputs\": [],
-      \"stateMutability\": \"nonpayable\",
-      \"type\": \"function\"
-    },{
-      \"inputs\": [
-        {
-          \"internalType\": \"uint160\",
-          \"name\": \"templateHash\",
-          \"type\": \"uint160\"
-        }
-      ],
-      \"name\": \"mutableDataHashOf\",
-      \"outputs\": [
-        {
-          \"internalType\": \"bytes32\",
-          \"name\": \"\",
-          \"type\": \"bytes32\"
-        }
-      ],
-      \"stateMutability\": \"view\",
-      \"type\": \"function\",
-      \"constant\": true
-    }]")
+(def frag-abi (slurp "FragmentTemplate.json"))
+
+; define this way to also inject into the ChainLoader
+(def shared-functions
+  `(do
+     ; template eth_getBlockByNumber call
+     (defn __eth-get-block-by-number [block-number]
+       (-> {"jsonrpc" "2.0"
+            "method" "eth_getBlockByNumber"
+            "params" [block-number true]
+            "id" 1} (ToJson)
+           (Http.Post ~(get _parameters :gatewayURL)
+                      :Timeout 60) (FromJson)
+           (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq)))
+
+     ; template for block data fetching
+     (defn __fetch-block-data [logic]
+       (-> (| (Take "block-number") = .block-number)
+           (| (Take "frag-hash") = .frag-hash)
+           (__eth-get-block-by-number .block-number) = .transactions
+           (Sequence .result :Types Type.Bytes)
+           .transactions
+           (ForEach
+            (-> (ExpectTable)
+                (| (Take "to") = .to)
+                (| (Take "input") = .input)
+                .to (When (Is ~fragments)
+                          (-> logic))))
+           .result))
+
+     ; eth block fetcher - to fetch call datas of fragment template upload calls
+     (defchain fetch-block-data-upload
+       (__fetch-block-data (-> .input (ExpectString) (Slice :From 10)
+                               ; decode input data to get hash, that's why true as 3rd param
+                               (Eth.DecodeCall ~frag-abi "upload" true)
+                               (| (Take 0) (ExpectBytes) = .immutableData)
+                               (| (Take 1) (ExpectBytes) = .mutableData)
+                               .immutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
+                               (When (Is .frag-hash) (-> .immutableData >> .result
+                                                         .mutableData >> .result
+                                                         (Return))))))
+
+     ; eth block fetcher - to fetch call datas of fragment template update calls
+     (defchain fetch-block-data-update
+       (__fetch-block-data (-> .input (ExpectString) (Slice :From 10)
+                               ; decode input data to get hash, that's why true as 3rd param
+                               (Eth.DecodeCall ~frag-abi "update" true)
+                               ; in theory Take 0 is the fragment hash but we could have multiple updates per block
+                               (| (Take 1) (ExpectBytes) = .mutableData)
+                               .mutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
+                               (When (Is .frag-hash) (-> .mutableData >> .result
+                                                         (Return))))))
+     ; template eth_call
+     (defn __eth-call [to data]
+       (-> {"jsonrpc" "2.0"
+            "method" "eth_call"
+            "params" [{"to" to "data" data} "latest"]
+            "id" 1} (ToJson)
+           (Http.Post ~(get _parameters :gatewayURL)
+                      :Timeout 60) (FromJson)
+           (ExpectTable) (Take "result") (ExpectString)))
+
+     ; utility function to load from chain or cache fragments
+     (defn __frag-load-cached [hash]
+       (->
+        ; TODO, check isReferencedBy
+        (Maybe
+         (->
+          ; TODO, decide how to flag cached content for update after a mutation happened
+          (ReadFile (str ~base-folder "frag-cache/" hash))
+          (ExpectBytesSeq))
+         (-> ; download worst case scenario
+          hash (Log "Downloading")
+          hash (FromBase58) >> .hashBytes
+          .hashBytes (Eth.EncodeCall ~frag-abi "dataOf") (ToHex) >= .callData
+          ~fragments = .fragments
+          (__eth-call .fragments .callData)
+          (Eth.DecodeCall ~frag-abi "dataOf")
+          (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
+          (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
+          (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
+          ; fetch block with immutable data
+          {"block-number" .immutable-block
+           "frag-hash" hash} (Do fetch-block-data-upload) = .first-result
+          .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
+                             (-> .first-result)
+                             (->
+                              .first-result (Take 0) >> .new-result
+                              .hashBytes (Eth.EncodeCall ~frag-abi "mutableDataHashOf") (ToHex) >= .callData
+                              (__eth-call .fragments .callData)
+                              (Eth.DecodeCall ~frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
+                              {"block-number" .mutable-block
+                               "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
+                              .new-result))
+          (WriteFile (str ~base-folder "frag-cache/" hash)))
+         :Silent true)))
+
+     (defn frag [hash & args]
+       (let [load-env (if (not (nil? (first args))) (first args) false)
+             params (if (not (nil? (first (rest args)))) (first (rest args)) {})]
+         ; data should be already available as fetched from the block input
+         (let [node (Node)
+               chain (Chain "downloader"
+                            (__frag-load-cached hash))
+               code (pr-str (do
+                              (schedule node chain)
+                              (run node 0.1)
+                                    ; stop returns the text code
+                              (stop chain)))]
+           (println code))))
+     ; end of shared functions
+     ))
+(eval shared-functions)
 
 ; ipfs uploader
 (defn _upload-to-ipfs [type type-name]
@@ -358,105 +382,10 @@
                                   ; stop returns the text code
                                   (stop chain)))]
                (eval (read-string code))))
-           ; template eth_getBlockByNumber call
-           (defn __eth-get-block-by-number [block-number]
-             (-> {"jsonrpc" "2.0"
-                  "method" "eth_getBlockByNumber"
-                  "params" [block-number true]
-                  "id" 1} (ToJson)
-                 (Http.Post ~(get _parameters :gatewayURL)
-                            :Timeout 60) (FromJson)
-                 (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq)))
-           ; template for block data fetching
-           (defn __fetch-block-data [logic]
-             (-> (| (Take "block-number") = .block-number)
-                 (| (Take "frag-hash") = .frag-hash)
-                 (__eth-get-block-by-number .block-number) = .transactions
-                 (Sequence .result :Types Type.Bytes)
-                 .transactions
-                 (ForEach
-                  (-> (ExpectTable)
-                      (| (Take "to") = .to)
-                      (| (Take "input") = .input)
-                      .to (When (Is ~fragments)
-                                (-> logic))))
-                 .result))
-           ; eth block fetcher - to fetch call datas of fragment template upload calls
-           (defchain fetch-block-data-upload
-             (__fetch-block-data (-> .input (ExpectString) (Slice :From 10)
-                                     ; decode input data to get hash, that's why true as 3rd param
-                                     (Eth.DecodeCall ~frag-abi "upload" true)
-                                     (| (Take 0) (ExpectBytes) = .immutableData)
-                                     (| (Take 1) (ExpectBytes) = .mutableData)
-                                     .immutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
-                                     (When (Is .frag-hash) (-> .immutableData >> .result
-                                                               .mutableData >> .result
-                                                               (Return))))))
-           ; eth block fetcher - to fetch call datas of fragment template update calls
-           (defchain fetch-block-data-update
-             (__fetch-block-data (-> .input (ExpectString) (Slice :From 10)
-                                     ; decode input data to get hash, that's why true as 3rd param
-                                     (Eth.DecodeCall ~frag-abi "update" true)
-                                     ; in theory Take 0 is the fragment hash but we could have multiple updates per block
-                                     (| (Take 1) (ExpectBytes) = .mutableData)
-                                     .mutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
-                                     (When (Is .frag-hash) (-> .mutableData >> .result
-                                                               (Return))))))
-           ; template eth_call
-           (defn __eth-call [to data]
-             (-> {"jsonrpc" "2.0"
-                  "method" "eth_call"
-                  "params" [{"to" to "data" data} "latest"]
-                  "id" 1} (ToJson)
-                 (Http.Post ~(get _parameters :gatewayURL)
-                            :Timeout 60) (FromJson)
-                 (ExpectTable) (Take "result") (ExpectString)))
-           ; utility function to load from chain or cache fragments
-           (defn __frag-load-cached [hash]
-             (->
-              (Maybe
-               (->
-                ; TODO, decide how to flag cached content for update after a mutation happened
-                (ReadFile (str ~base-folder "frag-cache/" hash))
-                (ExpectBytesSeq))
-               (-> ; download worst case scenario
-                hash (Log "Downloading")
-                hash (FromBase58) >> .hashBytes
-                .hashBytes (Eth.EncodeCall ~frag-abi "dataOf") (ToHex) >= .callData
-                ~fragments = .fragments
-                (__eth-call .fragments .callData)
-                (Eth.DecodeCall ~frag-abi "dataOf")
-                (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
-                (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
-                (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
-                ; fetch block with immutable data
-                {"block-number" .immutable-block
-                 "frag-hash" hash} (Do fetch-block-data-upload) = .first-result
-                .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
-                                   (-> .first-result)
-                                   (->
-                                    .first-result (Take 0) >> .new-result
-                                    .hashBytes (Eth.EncodeCall ~frag-abi "mutableDataHashOf") (ToHex) >= .callData
-                                    (__eth-call .fragments .callData)
-                                    (Eth.DecodeCall ~frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
-                                    {"block-number" .mutable-block
-                                     "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
-                                    .new-result))
-                (WriteFile (str ~base-folder "frag-cache/" hash)))
-               :Silent true)))
-           (defn frag [hash & args]
-             (let [load-env (if (not (nil? (first args))) (first args) false)
-                   params (if (not (nil? (first (rest args)))) (first (rest args)) {})]
-               ; data should be already available as fetched from the block input
-               (let [node (Node)
-                     chain (Chain "downloader"
-                                  (__frag-load-cached hash))
-                     code (pr-str (do
-                                    (schedule node chain)
-                                    (run node 0.1)
-                                    ; stop returns the text code
-                                    (stop chain)))]
-                 (println code))))
+
+           ; also inject here shared functions - this is a different environment
+           ~shared-functions
+
            ; shader compiler runner utility
            (defn __make-shader []
              (let [shaderc

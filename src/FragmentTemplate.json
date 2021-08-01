@@ -1,0 +1,119 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "uint160",
+        "name": "templateHash",
+        "type": "uint160"
+      }
+    ],
+    "name": "dataOf",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "immutableData",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "mutableData",
+        "type": "uint64"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "ipfsRuntime",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "immutableData",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "mutableData",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "ipfsRuntime",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint160[]",
+        "name": "references",
+        "type": "uint160[]"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "storageCids",
+        "type": "bytes32[]"
+      },
+      {
+        "internalType": "uint64[]",
+        "name": "storageSizes",
+        "type": "uint64[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "includeCost",
+        "type": "uint256"
+      }
+    ],
+    "name": "upload",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint160",
+        "name": "templateHash",
+        "type": "uint160"
+      }
+    ],
+    "name": "mutableDataHashOf",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint160",
+        "name": "referenced",
+        "type": "uint160"
+      },
+      {
+        "internalType": "uint160",
+        "name": "referencer",
+        "type": "uint160"
+      }
+    ],
+    "name": "isReferencedBy",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  }
+]
