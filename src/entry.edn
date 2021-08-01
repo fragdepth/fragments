@@ -11,9 +11,9 @@
   (do
     ; perform _parameters & _environment initilization here
     (def _environment (slurp "mutable.edn"))
-    (def _parameters {:windowTitle (if (contains? args :title) (get args :title) "Fragment")
-                      :windowWidth (if (contains? args :width) (get args :width) 1024)
-                      :windowHeight (if (contains? args :height) (get args :height) 768)
+    (def _parameters {:windowTitle (if (contains? args :windowTitle) (get args :windowTitle) "Fragment")
+                      :windowWidth (if (contains? args :windowWidth) (get args :windowWidth) 1024)
+                      :windowHeight (if (contains? args :windowHeight) (get args :windowHeight) 768)
                       :isSVG false
                       :xrSupported false
                       :gatewayURL (if (contains? args :gateway) (get args :gateway) "https://cloudflare-eth.com")})
@@ -131,12 +131,12 @@
          (let [node (Node)
                chain (Chain "downloader"
                             (__frag-load-cached hash))
-               code (pr-str (do
-                              (schedule node chain)
-                              (run node 0.1)
+               code (do
+                      (schedule node chain)
+                      (run node 0.1)
                                     ; stop returns the text code
-                              (stop chain)))]
-           (println code))))
+                      (stop chain))]
+           code)))
      ; end of shared functions
      ))
 (eval shared-functions)
@@ -298,29 +298,13 @@
 (def Main
   (Chain
    "Main" :Looped :LStack
-   ; try load a uri base64 compressed code string
-   (Setup
-    (str base-folder "binary-script")
-    (When
-     (FS.IsFile)
-     (-> (FS.Read :Bytes true)
-         (Brotli.Decompress)
-         (FromBytes) (ExpectString) = .code
-         (str base-folder "binary-script-unpacked")
-         (FS.Write .code :Overwrite true)
-         ; also check we expect an environment to unpack
-         (str base-folder "binary-environment")
-         (If (FS.IsFile)
-             (-> (FS.Read :Bytes true)
-                 (Brotli.Decompress)
-                 (FromBytes) (ExpectTable) (ToJson) = .jenv
-                 (str base-folder "binary-environment-unpacked")
-                 (FS.Write .jenv :Overwrite true))
-             (-> "No environment found"
-                 (Fail)))
-         "globalThis.chainblocks.ethScriptChanged()"
-         (_Emscripten.Eval)
-         (Stop))))
+   (if (contains? args :fragment)
+     (Setup
+      (frag (get args :fragment))
+      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) = .loaded-fragment-immutable)
+      (| (Take 1) = .loaded-fragment-mutable)
+      (str base-folder "immutable.tmp.edn")
+      (FS.Write .loaded-fragment-immutable :Overwrite true)))
    ; our main routine, manage a bgfx window and a chain loader
    (GFX.MainWindow
     :Title (get _parameters :windowTitle)
@@ -340,7 +324,9 @@
      (Maybe
       (ChainLoader
        (Chain*
-        (str base-folder "immutable.edn")
+        (if (contains? args :fragment)
+          (str base-folder "immutable.tmp.edn")
+          (str base-folder "immutable.edn"))
         ; bootstrap code to inject into the environment
         `(do
            ; read and eval environment
