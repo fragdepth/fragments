@@ -416,6 +416,7 @@
              (->
               (Maybe
                (->
+                ; TODO, decide how to flag cached content for update after a mutation happened
                 (ReadFile (str ~base-folder "frag-cache/" hash))
                 (ExpectBytesSeq))
                (-> ; download worst case scenario
