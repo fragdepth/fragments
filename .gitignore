@@ -7,3 +7,4 @@ src/live-chain-env-binary
 src/live-chain-eth-id
 chainblocks*.log
 src/immutable.tmp.edn
+.vscode/launch.json

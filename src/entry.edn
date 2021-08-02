@@ -3,14 +3,12 @@
 ; Runtimes will always use their own starndard version and not this copy
 
 ; JS side injects a _parameters map here
-; and a _environment string to eval
 
 (def args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
 
 (if (not (= platform "emscripten"))
   (do
-    ; perform _parameters & _environment initilization here
-    (def _environment (slurp "mutable.edn"))
+    ; perform _parameters initilization here
     (def _parameters {:windowTitle (if (contains? args :windowTitle) (get args :windowTitle) "Fragment")
                       :windowWidth (if (contains? args :windowWidth) (get args :windowWidth) 1024)
                       :windowHeight (if (contains? args :windowHeight) (get args :windowHeight) 768)
@@ -25,7 +23,7 @@
     (def base-folder "/.hasten/")))
 
 (def ipfs-gateway "https://ipfs.io")
-(def fragments "0xdddd4603dab460e3a9dd9e0b111ea3baf0d6b8ee")
+(def fragments "0x7777014b5b09d56299cb0c4b2e23abd61e8a8a65")
 
 (def frag-abi (slurp "FragmentTemplate.json"))
 
@@ -115,7 +113,7 @@
                              (-> .first-result)
                              (->
                               .first-result (Take 0) >> .new-result
-                              .hashBytes (Eth.EncodeCall ~frag-abi "mutableDataHashOf") (ToHex) >= .callData
+                              .hashBytes (Eth.EncodeCall ~frag-abi "mutableDataHashOf") (ToHex) > .callData
                               (__eth-call .fragments .callData)
                               (Eth.DecodeCall ~frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
                               {"block-number" .mutable-block
@@ -126,17 +124,26 @@
 
      (defn frag [hash & args]
        (let [load-env (if (not (nil? (first args))) (first args) false)
-             params (if (not (nil? (first (rest args)))) (first (rest args)) {})]
+             params (if (not (nil? (first (rest args)))) (first (rest args)) {})
+             node (Node)
+             chain (Chain "downloader"
+                          (__frag-load-cached hash)
+                          (Log "Fragment loaded")
+                          (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) >> .fragment-result)
+                          (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
+                          .fragment-result)
+             code (do
+                    (schedule node chain)
+                    (run node 0.1)
+                    ; stop returns the text code
+                    (stop chain))
+             ast (read-Var code)
+             immutable (str "(-> " (first ast) ")")
+             mutable (str "(do " (nth ast 1) ")")]
+         (if load-env (eval (read-string mutable)))
+         (eval (read-string immutable))
          ; data should be already available as fetched from the block input
-         (let [node (Node)
-               chain (Chain "downloader"
-                            (__frag-load-cached hash))
-               code (do
-                      (schedule node chain)
-                      (run node 0.1)
-                                    ; stop returns the text code
-                      (stop chain))]
-           code)))
+         ))
      ; end of shared functions
      ))
 (eval shared-functions)
@@ -295,16 +302,38 @@
   .cid (_Emscripten.Eval)
   "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
 
+;; (if (contains? args :fragment)
+;;   (let [node (Node)
+;;         chain (Chain "downloader"
+;;                      (__frag-load-cached (get args :fragment))
+;;                      (Log "Fragment pre-loaded")
+;;                      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) = .fragment-result)
+;;                      .fragment-result)
+;;         code (do
+;;                (schedule node chain)
+;;                (run node 0.1)
+;;                ; stop returns chains' result
+;;                (stop chain))
+;;         env-data (read-Var code)]
+;;     (println env-data)
+;;     (eval (read-string (get env-data "e")))))
+
 (def Main
   (Chain
-   "Main" :Looped :LStack
+   "Main" :Looped :LStack ; notice large stack size
+
+   ; Load a fragment from ethereum directly if the command line argument is given
    (if (contains? args :fragment)
      (Setup
-      (frag (get args :fragment))
+      ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
+      (__frag-load-cached (get args :fragment))
       (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) = .loaded-fragment-immutable)
-      (| (Take 1) = .loaded-fragment-mutable)
+      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
       (str base-folder "immutable.tmp.edn")
-      (FS.Write .loaded-fragment-immutable :Overwrite true)))
+      (FS.Write .loaded-fragment-immutable :Overwrite true)
+      (str base-folder "mutable.tmp.edn")
+      (FS.Write .loaded-fragment-mutable :Overwrite true)))
+
    ; our main routine, manage a bgfx window and a chain loader
    (GFX.MainWindow
     :Title (get _parameters :windowTitle)
@@ -324,20 +353,26 @@
      (Maybe
       (ChainLoader
        (Chain*
+        ; if ethereum fragment is loaded use that
         (if (contains? args :fragment)
           (str base-folder "immutable.tmp.edn")
           (str base-folder "immutable.edn"))
+
         ; bootstrap code to inject into the environment
         `(do
            ; read and eval environment
            (try*
-            (eval (read-string (str "(do " ~_environment "nil)")))
+            (eval (read-string (str "(do " (slurp (if (contains? ~args :fragment)
+                                                    (str ~base-folder "mutable.tmp.edn")
+                                                    (str ~base-folder "mutable.edn"))) "nil)")))
             (catch* err (prn (str "Failed to load environment with error: " err))))
+
            ; setup some constants
            (def Canvas-Width ~(get _parameters :windowWidth))
            (def Canvas-Height ~(get _parameters :windowHeight))
            (def XR? ~(get _parameters :xrSupported))
            (def identity ~identity)
+
            ; utility to crypto verify bytes
            (defn verify-bytes-hash [type kkhash]
              (if (not (nil? (first kkhash)))
@@ -350,6 +385,7 @@
                       (-> (Log "Wrong hash")
                           (str type " crypto-hash verification failed")
                           (Fail))))))
+
            ; ipfs loader to embedded inside scripts
            (defn load-ipfs [hash & kkhash]
              (let [node (Node)
@@ -547,7 +583,7 @@
           (get _parameters :windowTitle) (Set .environment "t")
           (get _parameters :windowWidth) (Set .environment "w")
           (get _parameters :windowHeight) (Set .environment "h")
-          _environment (EDN.Uglify) (Set .environment "e")
+          (slurp (str base-folder "mutable.edn")) (EDN.Uglify) (Set .environment "e")
           ; compress and write
           .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env
           .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes
