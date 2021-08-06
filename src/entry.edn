@@ -4,17 +4,19 @@
 
 ; JS side injects a _parameters map here
 
-(def args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
+(def _args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
 
 (if (not (= platform "emscripten"))
   (do
     ; perform _parameters initilization here
-    (def _parameters {:windowTitle (if (contains? args :windowTitle) (get args :windowTitle) "Fragment")
-                      :windowWidth (if (contains? args :windowWidth) (get args :windowWidth) 1024)
-                      :windowHeight (if (contains? args :windowHeight) (get args :windowHeight) 768)
+    (def _parameters {:immutable (if (contains? _args :immutable) (get _args :immutable) "immutable.edn")
+                      :mutable (if (contains? _args :mutable) (get _args :mutable) "mutable.edn")
+                      :windowTitle (if (contains? _args :windowTitle) (get _args :windowTitle) "Fragment")
+                      :windowWidth (if (contains? _args :windowWidth) (get _args :windowWidth) 1024)
+                      :windowHeight (if (contains? _args :windowHeight) (get _args :windowHeight) 768)
                       :isSVG false
                       :xrSupported false
-                      :gatewayURL (if (contains? args :gateway) (get args :gateway) "https://cloudflare-eth.com")})
+                      :gatewayURL (if (contains? _args :gateway) (get _args :gateway) "https://cloudflare-eth.com")})
     (def _Emscripten.Eval Pass)
     (def _Emscripten.EvalAsync Pass)
     (def base-folder ""))
@@ -302,10 +304,10 @@
   .cid (_Emscripten.Eval)
   "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
 
-;; (if (contains? args :fragment)
+;; (if (contains? _args :fragment)
 ;;   (let [node (Node)
 ;;         chain (Chain "downloader"
-;;                      (__frag-load-cached (get args :fragment))
+;;                      (__frag-load-cached (get _args :fragment))
 ;;                      (Log "Fragment pre-loaded")
 ;;                      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) = .fragment-result)
 ;;                      .fragment-result)
@@ -323,10 +325,10 @@
    "Main" :Looped :LStack ; notice large stack size
 
    ; Load a fragment from ethereum directly if the command line argument is given
-   (if (contains? args :fragment)
+   (if (contains? _args :fragment)
      (Setup
       ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
-      (__frag-load-cached (get args :fragment))
+      (__frag-load-cached (get _args :fragment))
       (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) = .loaded-fragment-immutable)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
       (str base-folder "immutable.tmp.edn")
@@ -354,17 +356,17 @@
       (ChainLoader
        (Chain*
         ; if ethereum fragment is loaded use that
-        (if (contains? args :fragment)
+        (if (contains? _args :fragment)
           (str base-folder "immutable.tmp.edn")
-          (str base-folder "immutable.edn"))
+          (str base-folder (get _parameters :immutable)))
 
         ; bootstrap code to inject into the environment
         `(do
            ; read and eval environment
            (try*
-            (eval (read-string (str "(do " (slurp (if (contains? ~args :fragment)
+            (eval (read-string (str "(do " (slurp (if (contains? ~_args :fragment)
                                                     (str ~base-folder "mutable.tmp.edn")
-                                                    (str ~base-folder "mutable.edn"))) "nil)")))
+                                                    (get _parameters :mutable))) "nil)")))
             (catch* err (prn (str "Failed to load environment with error: " err))))
 
            ; setup some constants
@@ -554,7 +556,7 @@
         ; unlock the next update
         "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)
         ; source
-        (str base-folder "immutable.edn")
+        (str base-folder (get _parameters :immutable))
         (When
          (FS.IsFile)
          (->
@@ -583,7 +585,7 @@
           (get _parameters :windowTitle) (Set .environment "t")
           (get _parameters :windowWidth) (Set .environment "w")
           (get _parameters :windowHeight) (Set .environment "h")
-          (slurp (str base-folder "mutable.edn")) (EDN.Uglify) (Set .environment "e")
+          (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e")
           ; compress and write
           .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env
           .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes
