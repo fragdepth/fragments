@@ -366,7 +366,7 @@
            (try*
             (eval (read-string (str "(do " (slurp (if (contains? ~_args :fragment)
                                                     (str ~base-folder "mutable.tmp.edn")
-                                                    (get _parameters :mutable))) "nil)")))
+                                                    ~(get _parameters :mutable))) "nil)")))
             (catch* err (prn (str "Failed to load environment with error: " err))))
 
            ; setup some constants
