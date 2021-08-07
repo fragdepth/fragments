@@ -1,5 +1,6 @@
 src/shaders
 src/ipfs-cache
+src/ar-cache
 src/frag-cache
 src/.gltf-model.glb
 src/live-chain-binary

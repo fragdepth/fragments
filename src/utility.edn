@@ -96,37 +96,54 @@
      (shaderc .varying .fs-code "f") = .fs-bytes
      (GFX.Shader :VertexShader .vs-bytes :PixelShader .fs-bytes))))
 
+; this is used only inside ExpectLike blocks as an example output type
+(defchain __downloader-chain-template
+  nil (Http.Get ""
+                :Bytes true
+                :FullResponse true
+                :Timeout 60))
+(prepare __downloader-chain-template)
+
 (defn __ipfs-load-cached [hash full]
   (->
    (Maybe (->
-           (ReadFile (str base-folder "ipfs-cache/" hash))
-           (if full (ExpectTable) (ExpectBytes)))
+           (ReadFile (str base-folder "ipfs-cache/" hash (if full "F" "B")))
+           (if full 
+             (ExpectLike __downloader-chain-template :Unsafe true)
+             (ExpectBytes)))
           (-> ; download worst case scenario
            hash (Log "Downloading from ipfs")
            nil (Http.Get (str ipfs-gateway "/ipfs/" hash)
                          :Bytes true
                          :FullResponse full
                          :Timeout 60)
-           (WriteFile (str base-folder "ipfs-cache/" hash)))
+           (WriteFile (str base-folder "ipfs-cache/" hash (if full "F" "B")) :Flush true))
           :Silent true)))
 
 (defn __ar-load-cached [tx full]
   (->
    (Maybe (->
-           (ReadFile (str base-folder "ar-cache/" tx))
-           (if full (ExpectTable) (ExpectBytes)))
+           (ReadFile (str base-folder "ar-cache/" tx (if full "F" "B")))
+           (if full
+             (ExpectLike __downloader-chain-template :Unsafe true)
+             (ExpectBytes)))
           (-> ; download worst case scenario
            tx (Log "Downloading from arweave")
            nil (Http.Get (str ar-gateway "/" tx)
                          :Bytes true
                          :FullResponse full
                          :Timeout 60)
-           (WriteFile (str base-folder "ar-cache/" tx)))
+           (WriteFile (str base-folder "ar-cache/" tx (if full "F" "B")) :Flush true))
           :Silent true)))
-
 
 (defmacro! ar (fn* [tx] ['__ar-load-cached (str tx)]))
 (defmacro! ipfs (fn* [cid] ['__ipfs-load-cached (str cid)]))
+
+; utility bytes fetcher from ipfs or arweave with optional full payload (headers, status etc)
+(defn fetch [file & full]
+  (let [dl-func (first file)
+        hash (nth file 1)]
+    (dl-func hash (if (empty? full) false (first full)))))
 
 (if (= platform "emscripten")
              ; emscripten shader compiler

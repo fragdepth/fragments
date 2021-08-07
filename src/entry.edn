@@ -122,7 +122,7 @@
                               {"block-number" .mutable-block
                                "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
                               .new-result))
-          (WriteFile (str ~base-folder "frag-cache/" hash)))
+          (WriteFile (str ~base-folder "frag-cache/" hash) :Flush true))
          :Silent true)))
 
      (defn frag [hash & args]
@@ -452,7 +452,7 @@
                         ; also cache locally in order to load it from other files!
                         (str base-folder "frag-cache/") >= .cached-name
                         .b58-eth-id (AppendTo .cached-name)
-                        .local-fragment (WriteFile .cached-name)))
+                        .local-fragment (WriteFile .cached-name :Flush true)))
                 "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
           (Count .compressed-bytes) (Log "compressed source size")
           (Count .compressed-env) (Log "compressed env size"))))
