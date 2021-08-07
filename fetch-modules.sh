@@ -1,6 +1,6 @@
 IPFS_SHADERC_WASI="bafybeif5juuskzbygggzexxwdbo265b777vpx3uxgeu4joiqkdpekdazji"
 IPFS_SHADERC_EXE="QmaTmrmDjxWeSCpgPAXWCSaC8wzqhBh46sSZuQ7ReNsYiZ"
-IPFS_SHADERS="QmNYTY6SPhEvE6KJ67T2NgPiTBAsjXY3q1vUwakq7kscNT"
+IPFS_SHADERS="QmTJQYQuGnLx1iESXrCUjJnFKrdWn4TcFRr6dgsnYxUxeH"
 
 mkdir -p src/shaders/lib/gltf
 mkdir -p src/shaders/include
