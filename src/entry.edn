@@ -587,8 +587,8 @@
           (get _parameters :windowHeight) (Set .environment "h")
           (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e")
           ; compress and write
-          .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env
-          .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes
+          .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
+          .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
           (Sub (->
                 (Await (->
                         (str base-folder "live-chain-binary")
@@ -602,7 +602,11 @@
                         "0x" (PrependTo .eth-id)
                         .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
                         (str base-folder "live-chain-eth-id")
-                        (FS.Write .b58-eth-id :Overwrite true)))
+                        (FS.Write .b58-eth-id :Overwrite true)
+                        ; also cache locally in order to load it from other files!
+                        (str base-folder "frag-cache/") >= .cached-name
+                        .b58-eth-id (AppendTo .cached-name)
+                        .local-fragment (WriteFile .cached-name)))
                 "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
           (Count .compressed-bytes) (Log "compressed source size")
           (Count .compressed-env) (Log "compressed env size"))))
