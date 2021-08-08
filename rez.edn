@@ -1,10 +1,11 @@
 ; parameters
 (def template-hash (slurp "src/live-chain-eth-id"))
-(def token-name "My Infinite Fragment")
-(def token-symbol "INFF")
+(def token-name "My Rez Fragment n.1")
+(def token-symbol "REZ1")
 (def unique true)
-(def uint96-max "0xffffffffffffffffffffffffffffffffffffffff")
-(def max-supply uint96-max) ; mint tokens forever
+(def uint96-max "0xffffffffffffffffffffffffffffffffffffffff") ; mint tokens forever
+(def _10_000 "0x2710") ; mint 10k tokens
+(def max-supply _10_000) 
 
 ; contracts abis
 (def template-abi "[{
@@ -53,7 +54,7 @@
     }]")
 
 (defchain minter
-  template-hash (HexToBytes) = .templateHash
+  template-hash (FromBase58) = .templateHash
   max-supply (BigInt) (BigInt.ToBytes) = .maxSupply
   [.templateHash token-name token-symbol unique .maxSupply]
   (Eth.EncodeCall template-abi "rez")
