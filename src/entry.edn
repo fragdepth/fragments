@@ -9,7 +9,8 @@
 (if (not (= platform "emscripten"))
   (do
     ; perform _parameters initilization here
-    (def _parameters {:immutable (if (contains? _args :immutable) (get _args :immutable) "immutable.edn")
+    (def _parameters {:user (if (contains? _args :user) (get _args :user) "0x0000000000000000000000000000000000000000")
+                      :immutable (if (contains? _args :immutable) (get _args :immutable) "immutable.edn")
                       :mutable (if (contains? _args :mutable) (get _args :mutable) "mutable.edn")
                       :windowTitle (if (contains? _args :windowTitle) (get _args :windowTitle) "Fragment")
                       :windowWidth (if (contains? _args :windowWidth) (get _args :windowWidth) 1024)
@@ -98,7 +99,7 @@
          (->
           ; TODO, decide how to flag cached content for update after a mutation happened
           (ReadFile (str ~base-folder "frag-cache/" hash))
-          (ExpectBytesSeq))
+          (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""}))
          (-> ; download worst case scenario
           hash (Log "Downloading")
           hash (FromBase58) >> .hashBytes
@@ -121,8 +122,11 @@
                               (Eth.DecodeCall ~frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
                               {"block-number" .mutable-block
                                "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
-                              .new-result))
-          (WriteFile (str ~base-folder "frag-cache/" hash) :Flush true))
+                              .new-result)) (Set .frag-result "data")
+          .hashBytes (Eth.EncodeCall ~frag-abi "ownerOf") (ToHex) > .callData
+          (__eth-call .fragments .callData)
+          (Eth.DecodeCall ~frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
+          .frag-result (Log) (WriteFile (str ~base-folder "frag-cache/" hash) :Flush true))
          :Silent true)))
 
      (defn frag [hash & args]
@@ -132,6 +136,7 @@
              chain (Chain "downloader"
                           (__frag-load-cached hash)
                           (Log "Fragment loaded")
+                          (Take "data")
                           (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) >> .fragment-result)
                           (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
                           .fragment-result)
@@ -339,6 +344,7 @@
      (Setup
       ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
       (__frag-load-cached (get _args :fragment))
+      (Take "data")
       (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) = .loaded-fragment-immutable)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
       (str base-folder "immutable.tmp.edn")
