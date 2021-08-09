@@ -23,6 +23,7 @@
     (def base-folder ""))
   ; else we are already running on emscripten
   (do
+    ; TODO I think we can remove this.. need to test JS/WASM
     (def base-folder "/.hasten/")))
 
 (def ipfs-gateway "https://ipfs.io")
@@ -31,130 +32,7 @@
 
 (def frag-abi (slurp "FragmentTemplate.json"))
 
-; define this way to also inject into the ChainLoader
-(def shared-functions
-  `(do
-     ; template eth_getBlockByNumber call
-     (defn __eth-get-block-by-number [block-number]
-       (-> {"jsonrpc" "2.0"
-            "method" "eth_getBlockByNumber"
-            "params" [block-number true]
-            "id" 1} (ToJson)
-           (Http.Post ~(get _parameters :gatewayURL)
-                      :Timeout 60) (FromJson)
-           (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq)))
-
-     ; template for block data fetching
-     (defn __fetch-block-data [logic]
-       (-> (| (Take "block-number") = .block-number)
-           (| (Take "frag-hash") = .frag-hash)
-           (__eth-get-block-by-number .block-number) = .transactions
-           (Sequence .result :Types Type.Bytes)
-           .transactions
-           (ForEach
-            (-> (ExpectTable)
-                (| (Take "to") = .to)
-                (| (Take "input") = .input)
-                .to (When (Is ~fragments)
-                          (-> logic))))
-           .result))
-
-     ; eth block fetcher - to fetch call datas of fragment template upload calls
-     (defchain fetch-block-data-upload
-       (__fetch-block-data (-> .input (ExpectString) (Slice :From 10)
-                               ; decode input data to get hash, that's why true as 3rd param
-                               (Eth.DecodeCall ~frag-abi "upload" true)
-                               (| (Take 0) (ExpectBytes) = .immutableData)
-                               (| (Take 1) (ExpectBytes) = .mutableData)
-                               .immutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
-                               (When (Is .frag-hash) (-> .immutableData >> .result
-                                                         .mutableData >> .result
-                                                         (Return))))))
-
-     ; eth block fetcher - to fetch call datas of fragment template update calls
-     (defchain fetch-block-data-update
-       (__fetch-block-data (-> .input (ExpectString) (Slice :From 10)
-                               ; decode input data to get hash, that's why true as 3rd param
-                               (Eth.DecodeCall ~frag-abi "update" true)
-                               ; in theory Take 0 is the fragment hash but we could have multiple updates per block
-                               (| (Take 1) (ExpectBytes) = .mutableData)
-                               .mutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
-                               (When (Is .frag-hash) (-> .mutableData >> .result
-                                                         (Return))))))
-     ; template eth_call
-     (defn __eth-call [to data]
-       (-> {"jsonrpc" "2.0"
-            "method" "eth_call"
-            "params" [{"to" to "data" data} "latest"]
-            "id" 1} (ToJson)
-           (Http.Post ~(get _parameters :gatewayURL)
-                      :Timeout 60) (FromJson)
-           (ExpectTable) (Take "result") (ExpectString)))
-
-     ; utility function to load from chain or cache fragments
-     (defn __frag-load-cached [hash]
-       (->
-        ; TODO, check isReferencedBy
-        (Maybe
-         (->
-          ; TODO, decide how to flag cached content for update after a mutation happened
-          (ReadFile (str ~base-folder "frag-cache/" hash))
-          (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""}))
-         (-> ; download worst case scenario
-          hash (Log "Downloading")
-          hash (FromBase58) >> .hashBytes
-          .hashBytes (Eth.EncodeCall ~frag-abi "dataOf") (ToHex) >= .callData
-          ~fragments = .fragments
-          (__eth-call .fragments .callData)
-          (Eth.DecodeCall ~frag-abi "dataOf")
-          (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
-          (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
-          (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
-          ; fetch block with immutable data
-          {"block-number" .immutable-block
-           "frag-hash" hash} (Do fetch-block-data-upload) = .first-result
-          .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
-                             (-> .first-result)
-                             (->
-                              .first-result (Take 0) >> .new-result
-                              .hashBytes (Eth.EncodeCall ~frag-abi "mutableDataHashOf") (ToHex) > .callData
-                              (__eth-call .fragments .callData)
-                              (Eth.DecodeCall ~frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
-                              {"block-number" .mutable-block
-                               "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
-                              .new-result)) (Set .frag-result "data")
-          .hashBytes (Eth.EncodeCall ~frag-abi "ownerOf") (ToHex) > .callData
-          (__eth-call .fragments .callData)
-          (Eth.DecodeCall ~frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
-          .frag-result (Log) (WriteFile (str ~base-folder "frag-cache/" hash) :Flush true))
-         :Silent true)))
-
-     (defn frag [hash & args]
-       (let [load-env (if (not (nil? (first args))) (first args) false)
-             params (if (not (nil? (first (rest args)))) (first (rest args)) {})
-             node (Node)
-             chain (Chain "downloader"
-                          (__frag-load-cached hash)
-                          (Log "Fragment loaded")
-                          (Take "data")
-                          (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) >> .fragment-result)
-                          (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
-                          .fragment-result)
-             code (do
-                    (schedule node chain)
-                    (run node 0.1)
-                    ; stop returns the text code
-                    (stop chain))
-             ast (read-Var code)
-             immutable (str "(-> " (first ast) ")")
-             mutable (str "(do " (nth ast 1) ")")]
-         (if load-env (eval (read-string mutable)))
-         (eval (read-string immutable))
-         ; data should be already available as fetched from the block input
-         ))
-     ; end of shared functions
-     ))
-(eval shared-functions)
+(load-file (str base-folder "shared.edn"))
 
 (defn _decode-base64 []
   (-> (Replace ["-" "_"] ["+" "/"]) >= .b64
@@ -319,22 +197,6 @@
   .cid (_Emscripten.Eval)
   "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
 
-;; (if (contains? _args :fragment)
-;;   (let [node (Node)
-;;         chain (Chain "downloader"
-;;                      (__frag-load-cached (get _args :fragment))
-;;                      (Log "Fragment pre-loaded")
-;;                      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) = .fragment-result)
-;;                      .fragment-result)
-;;         code (do
-;;                (schedule node chain)
-;;                (run node 0.1)
-;;                ; stop returns chains' result
-;;                (stop chain))
-;;         env-data (read-Var code)]
-;;     (println env-data)
-;;     (eval (read-string (get env-data "e")))))
-
 (def Main
   (Chain
    "Main" :Looped :LStack ; notice large stack size
@@ -384,84 +246,90 @@
            (def ipfs-gateway ~ipfs-gateway)
            (def ar-gateway ~ar-gateway)
            (def identity ~identity)
-           ~shared-functions
+           (def frag-abi ~frag-abi)
+           (def fragments ~fragments)
+           (load-file (str base-folder "shared.edn"))
            (load-file (str base-folder "utility.edn"))))
        :OnReload
        ; compress source to url format
        (->
-        ; do some reflection to evaluate the chain
-        ; mark as tainted if we access the internet
-        (| (Reflect.Blocks)
-           (ForEach
-            (->
-             (Reflect.Name)
-             (Match ["Http.Get" (-> true = .taint)
-                     "Http.Head" (-> true = .taint)
-                     "Http.Post" (-> true = .taint)
-                     "Http.Put" (-> true = .taint)
-                     "Http.Patch" (-> true = .taint)
-                     "Http.Delete" (-> true = .taint)
-                     nil nil]))))
-        .taint ?? false
-        (Match [true (-> "globalThis.chainblocks.tainted = true" (_Emscripten.Eval))
-                false (-> "globalThis.chainblocks.tainted = false" (_Emscripten.Eval))])
-        ; unlock the next update
-        "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)
-        ; source
-        (str base-folder (get _parameters :immutable))
-        (When
-         (FS.IsFile)
-         (->
-          ; compress the bytes as they are, we need to hash properly
-          (FS.Read)
-          (EDN.Uglify
-                     ; hooks
-           ["Shader" ; minimize shaders
-            (->
-             ; shaders might be complex and templated/macro etc
-             ; so just try if this works, if not pass the original
-             = .sparams
-             (Maybe
-              (->
-               .sparams (Take 0) (ExpectString) >> .sres ; Shader
-               .sparams (Take 1) (ExpectString) >> .sres ; var name
-               .sparams (Take 2) (ExpectString) >> .sres ; varyings
-               .sparams (Take 3) (ExpectString) (Do ugly-shader) >> .sres
-               .sparams (Take 4) (ExpectString) (Do ugly-shader) >> .sres
-               .sres)
-              (->
-               .sparams)
-              :Silent true))]) = .ugly-code
-          ; enviruments are not hashed here, so we can add structured data
-          ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
-          (get _parameters :windowTitle) (Set .environment "t")
-          (get _parameters :windowWidth) (Set .environment "w")
-          (get _parameters :windowHeight) (Set .environment "h")
-          (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e")
-          ; compress and write
-          .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
-          .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
-          (Sub (->
-                (Await (->
-                        (str base-folder "live-chain-binary")
-                        (FS.Write .compressed-bytes :Overwrite true)
-                        (str base-folder "live-chain-env-binary")
-                        (FS.Write .compressed-env :Overwrite true)
-                        .compressed-bytes
-                        (Hash.Keccak-256)
-                        ; take 20 bytes like ETH
-                        (ToHex) (Slice :From 26) >= .eth-id
-                        "0x" (PrependTo .eth-id)
-                        .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
-                        (str base-folder "live-chain-eth-id")
-                        (FS.Write .b58-eth-id :Overwrite true)
-                        ; also cache locally in order to load it from other files!
-                        (str base-folder "frag-cache/") >= .cached-name
-                        .b58-eth-id (AppendTo .cached-name)
-                        .local-fragment (WriteFile .cached-name :Flush true)))
-                "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
-          (Count .compressed-bytes) (Log "compressed source size")
-          (Count .compressed-env) (Log "compressed env size"))))
+        ; Don't save if we are running as fragment/entity player!
+        (if (not (contains? _args :fragment))
+          (->
+            ; do some reflection to evaluate the chain
+            ; mark as tainted if we access the internet
+            (| (Reflect.Blocks)
+               (ForEach
+                (->
+                 (Reflect.Name)
+                 (Match ["Http.Get" (-> true = .taint)
+                         "Http.Head" (-> true = .taint)
+                         "Http.Post" (-> true = .taint)
+                         "Http.Put" (-> true = .taint)
+                         "Http.Patch" (-> true = .taint)
+                         "Http.Delete" (-> true = .taint)
+                         nil nil]))))
+            .taint ?? false
+            (Match [true (-> "globalThis.chainblocks.tainted = true" (_Emscripten.Eval))
+                    false (-> "globalThis.chainblocks.tainted = false" (_Emscripten.Eval))])
+            ; unlock the next update
+            "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)
+            ; source
+            (str base-folder (get _parameters :immutable))
+            (When
+             (FS.IsFile)
+             (->
+              ; compress the bytes as they are, we need to hash properly
+              (FS.Read)
+              (EDN.Uglify
+               ; hooks
+               ["Shader" ; minimize shaders
+                (->
+                 ; shaders might be complex and templated/macro etc
+                 ; so just try if this works, if not pass the original
+                 = .sparams
+                 (Maybe
+                  (->
+                   .sparams (Take 0) (ExpectString) >> .sres ; Shader
+                   .sparams (Take 1) (ExpectString) >> .sres ; var name
+                   .sparams (Take 2) (ExpectString) >> .sres ; varyings
+                   .sparams (Take 3) (ExpectString) (Do ugly-shader) >> .sres
+                   .sparams (Take 4) (ExpectString) (Do ugly-shader) >> .sres
+                   .sres)
+                  (->
+                   .sparams)
+                  :Silent true))]) = .ugly-code
+                  ; enviruments are not hashed here, so we can add structured data
+                  ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
+              (get _parameters :windowTitle) (Set .environment "t")
+              (get _parameters :windowWidth) (Set .environment "w")
+              (get _parameters :windowHeight) (Set .environment "h")
+              (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e"); compress and write
+              .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
+              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
+              .local-fragment (Set .frag-data "data")
+              (get _parameters :owner) (Set .frag-data "owner")
+              (Sub (->
+                    (Await (->
+                            (str base-folder "live-chain-binary")
+                            (FS.Write .compressed-bytes :Overwrite true)
+                            (str base-folder "live-chain-env-binary")
+                            (FS.Write .compressed-env :Overwrite true)
+                            .compressed-bytes
+                            (Hash.Keccak-256)
+                            ; take 20 bytes like ETH
+                            (ToHex) (Slice :From 26) >= .eth-id
+                            "0x" (PrependTo .eth-id)
+                            .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
+                            (str base-folder "live-chain-eth-id")
+                            (FS.Write .b58-eth-id :Overwrite true)
+                            ; also cache locally in order to load it from other files!
+                            (str base-folder "frag-cache/") >= .cached-name
+                            .b58-eth-id (AppendTo .cached-name)
+                            .frag-data (WriteFile .cached-name :Flush true)))
+                    "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
+              (Count .compressed-bytes) (Log "compressed source size")
+              (Count .compressed-env) (Log "compressed env size"))))))
        :OnError
        (-> ; unlock the next update
         "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)))
