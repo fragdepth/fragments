@@ -31,6 +31,7 @@
 (def fragments "0x7777014b5b09d56299cb0c4b2e23abd61e8a8a65")
 
 (def frag-abi (slurp "FragmentTemplate.json"))
+(def entity-abi (slurp "FragmentEntity.json"))
 
 (load-file (str base-folder "shared.edn"))
 
@@ -213,6 +214,14 @@
       (FS.Write .loaded-fragment-immutable :Overwrite true)
       (str base-folder "mutable.tmp.edn")
       (FS.Write .loaded-fragment-mutable :Overwrite true)))
+   
+   (if (and (contains? _args :entity) (contains? _args :entity-id))
+     (Setup
+      ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
+      (__entity-load-cached (get _args :entity) (get _args :entity-id))
+      (Log "entity load")
+      ;
+      ))
 
    ; our main routine, manage a bgfx window and a chain loader
    (GFX.MainWindow
@@ -247,6 +256,7 @@
            (def ar-gateway ~ar-gateway)
            (def identity ~identity)
            (def frag-abi ~frag-abi)
+           (def entity-abi ~entity-abi)
            (def fragments ~fragments)
            (load-file (str base-folder "shared.edn"))
            (load-file (str base-folder "utility.edn"))))

@@ -9,3 +9,4 @@ src/live-chain-eth-id
 chainblocks*.log
 src/immutable.tmp.edn
 .vscode/launch.json
+src/mutable.tmp.edn

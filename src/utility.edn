@@ -7,7 +7,7 @@
                                          (get _parameters :mutable))) "nil)")))
  (catch* err (prn (str "Failed to load environment with error: " err))))
 
-; setup some constants
+; setup some constants - run afer env to overwrite and force them in
 (def Canvas-Width (get _parameters :windowWidth))
 (def Canvas-Height (get _parameters :windowHeight))
 (def XR? (get _parameters :xrSupported))
