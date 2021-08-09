@@ -58,6 +58,31 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "total",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "royalties",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "vault",
+        "type": "uint256"
+      }
+    ],
+    "name": "Earned",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "previousOwner",
@@ -71,81 +96,6 @@
       }
     ],
     "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "Reward",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "entityContract",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "vaultContract",
-        "type": "address"
-      }
-    ],
-    "name": "Rez",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "Stake",
     "type": "event"
   },
   {
@@ -179,11 +129,29 @@
       {
         "indexed": true,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "first",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "last",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "version",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "environment",
+        "type": "bytes"
       }
     ],
-    "name": "Update",
+    "name": "Upload",
     "type": "event"
   },
   {
@@ -425,26 +393,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "bytes4",
-        "name": "interfaceId",
-        "type": "bytes4"
-      }
-    ],
-    "name": "supportsInterface",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
     "inputs": [],
     "name": "symbol",
     "outputs": [
@@ -554,171 +502,71 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "bytes4",
+        "name": "interfaceId",
+        "type": "bytes4"
+      }
+    ],
+    "name": "supportsInterface",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "tokenName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "tokenSymbol",
+        "type": "string"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint160",
+            "name": "templateId",
+            "type": "uint160"
+          },
+          {
+            "internalType": "uint96",
+            "name": "maxSupply",
+            "type": "uint96"
+          },
+          {
+            "internalType": "address",
+            "name": "templatesLibrary",
+            "type": "address"
+          },
+          {
+            "internalType": "address payable",
+            "name": "vault",
+            "type": "address"
+          },
+          {
+            "internalType": "bool",
+            "name": "unique",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct FragmentInitData",
+        "name": "params",
+        "type": "tuple"
+      }
+    ],
     "name": "bootstrap",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function",
-    "payable": true
-  },
-  {
-    "inputs": [],
-    "name": "getByteCost",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "cost",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "cost",
-        "type": "uint256"
-      }
-    ],
-    "name": "setByteCost",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getStakeLock",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "time",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "time",
-        "type": "uint256"
-      }
-    ],
-    "name": "setStakeLock",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getEntityLogic",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "setEntityLogic",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getUtilityToken",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "setUtilityToken",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getUtilityLibrary",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "setUtilityLibrary",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getVaultLogic",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "setVaultLogic",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -744,19 +592,72 @@
     "constant": true
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "getTemplate",
+    "outputs": [
       {
         "internalType": "uint160",
-        "name": "referenced",
-        "type": "uint160"
-      },
-      {
-        "internalType": "uint160",
-        "name": "referencer",
+        "name": "",
         "type": "uint160"
       }
     ],
-    "name": "isReferencedBy",
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "getLibrary",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getData",
+    "outputs": [
+      {
+        "internalType": "uint160",
+        "name": "environmentHash",
+        "type": "uint160"
+      },
+      {
+        "internalType": "uint256",
+        "name": "blockNumber",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint160",
+        "name": "dataHash",
+        "type": "uint160"
+      },
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "containsId",
     "outputs": [
       {
         "internalType": "bool",
@@ -771,301 +672,27 @@
   {
     "inputs": [
       {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      },
-      {
         "internalType": "address",
-        "name": "referencer",
+        "name": "delegate",
         "type": "address"
       }
     ],
-    "name": "addWhitelist",
+    "name": "setDelegate",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      },
-      {
-        "internalType": "address",
-        "name": "referencer",
-        "type": "address"
-      }
-    ],
-    "name": "removeWhitelist",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "includeCostOf",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "cost",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "mutableDataHashOf",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "dataOf",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "immutableData",
-        "type": "uint64"
-      },
-      {
-        "internalType": "uint64",
-        "name": "mutableData",
-        "type": "uint64"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "ipfsRuntime",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      },
-      {
-        "internalType": "address",
-        "name": "staker",
-        "type": "address"
-      }
-    ],
-    "name": "stakeOf",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "blockStart",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      },
-      {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      }
-    ],
-    "name": "getStakeAt",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "staker",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "getStakeCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "stake",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "unstake",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "getEntities",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "entities",
-        "type": "address[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "addr",
-        "type": "address"
-      },
-      {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      }
-    ],
-    "name": "isEntityOf",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
   },
   {
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "immutableData",
+        "name": "environment",
         "type": "bytes"
       },
       {
-        "internalType": "bytes",
-        "name": "mutableData",
-        "type": "bytes"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "ipfsRuntime",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "uint160[]",
-        "name": "references",
-        "type": "uint160[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "storageCids",
-        "type": "bytes32[]"
-      },
-      {
-        "internalType": "uint64[]",
-        "name": "storageSizes",
-        "type": "uint64[]"
-      },
-      {
-        "internalType": "uint256",
-        "name": "includeCost",
-        "type": "uint256"
+        "internalType": "uint96",
+        "name": "amount",
+        "type": "uint96"
       }
     ],
     "name": "upload",
@@ -1076,27 +703,93 @@
   {
     "inputs": [
       {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
-      },
-      {
         "internalType": "bytes",
-        "name": "mutableData",
+        "name": "signature",
         "type": "bytes"
       },
       {
-        "internalType": "bytes32",
-        "name": "ipfsRuntime",
-        "type": "bytes32"
+        "internalType": "bytes",
+        "name": "environment",
+        "type": "bytes"
       },
       {
+        "internalType": "uint96",
+        "name": "amount",
+        "type": "uint96"
+      }
+    ],
+    "name": "mint",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function",
+    "payable": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "signature",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "environment",
+        "type": "bytes"
+      }
+    ],
+    "name": "bid",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function",
+    "payable": true
+  },
+  {
+    "inputs": [],
+    "name": "currentBidPrice",
+    "outputs": [
+      {
         "internalType": "uint256",
-        "name": "includeCost",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "update",
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "isMarketOpen",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "price",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint96",
+        "name": "maxAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "cap",
+        "type": "uint96"
+      }
+    ],
+    "name": "setPublicSale",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1104,45 +797,71 @@
   {
     "inputs": [
       {
-        "internalType": "uint160",
-        "name": "templateHash",
-        "type": "uint160"
+        "internalType": "uint256",
+        "name": "maxPrice",
+        "type": "uint256"
       },
       {
-        "internalType": "string",
-        "name": "tokenName",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "tokenSymbol",
-        "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "unique",
-        "type": "bool"
+        "internalType": "uint256",
+        "name": "priceStep",
+        "type": "uint256"
       },
       {
         "internalType": "uint96",
-        "name": "maxSupply",
+        "name": "slots",
         "type": "uint96"
       }
     ],
-    "name": "rez",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "entity",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "vault",
-        "type": "address"
-      }
-    ],
+    "name": "openDutchAuction",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "stopMarket",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "getFeeRecipients",
+    "outputs": [
+      {
+        "internalType": "address payable[]",
+        "name": "split",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "getFeeBps",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "split",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function",
+    "constant": true
   }
 ]

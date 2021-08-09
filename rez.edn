@@ -5,53 +5,16 @@
 (def unique true)
 (def uint96-max "0xffffffffffffffffffffffffffffffffffffffff") ; mint tokens forever
 (def _10_000 "0x2710") ; mint 10k tokens
-(def max-supply _10_000) 
+(def max-supply _10_000)
+(def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
+
+; contracts are deterministic so should be:
+; Entity: 0x16cD316D75EBAfC368E5633ee3CD4e032b099038
+; Vault: 0x850f8c7f943Ad06ABe06a97015f8935bB3925125
 
 ; contracts abis
-(def template-abi "[{
-      \"inputs\": [
-        {
-          \"internalType\": \"uint160\",
-          \"name\": \"templateHash\",
-          \"type\": \"uint160\"
-        },
-        {
-          \"internalType\": \"string\",
-          \"name\": \"tokenName\",
-          \"type\": \"string\"
-        },
-        {
-          \"internalType\": \"string\",
-          \"name\": \"tokenSymbol\",
-          \"type\": \"string\"
-        },
-        {
-          \"internalType\": \"bool\",
-          \"name\": \"unique\",
-          \"type\": \"bool\"
-        },
-        {
-          \"internalType\": \"uint96\",
-          \"name\": \"maxSupply\",
-          \"type\": \"uint96\"
-        }
-      ],
-      \"name\": \"rez\",
-      \"outputs\": [
-        {
-          \"internalType\": \"address\",
-          \"name\": \"entity\",
-          \"type\": \"address\"
-        },
-        {
-          \"internalType\": \"address\",
-          \"name\": \"vault\",
-          \"type\": \"address\"
-        }
-      ],
-      \"stateMutability\": \"nonpayable\",
-      \"type\": \"function\"
-    }]")
+(def template-abi (slurp "src/FragmentTemplate.json"))
+(def entity-abi (slurp "src/FragmentEntity.json"))
 
 (defchain minter
   template-hash (FromBase58) = .templateHash
@@ -60,6 +23,19 @@
   (Eth.EncodeCall template-abi "rez")
   (ToHex) (Log "Call Input"))
 
+(defchain delegate
+  private-key-base (Hash.Keccak-256) = .privateKeyBase
+  (| (ECDSA.PublicKey)
+     (Slice :From 1)
+     (Hash.Keccak-256)
+     (Slice :From 12)
+     (ToHex)
+     (Log "Eth Address") = .delegate)
+  [.delegate]
+  (Eth.EncodeCall entity-abi "setDelegate")
+  (ToHex) (Log "Call Input"))
+
 (defnode main)
 (schedule main minter)
+(schedule main delegate)
 (run main)
