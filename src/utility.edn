@@ -2,7 +2,7 @@
 
 ; read and eval environment
 (try*
- (eval (read-string (str "(do " (slurp (if (contains? _args :fragment)
+ (eval (read-string (str "(do " (slurp (if (or (contains? _args :fragment) (and (contains? _args :entity) (contains? _args :entity-id)))
                                          (str base-folder "mutable.tmp.edn")
                                          (get _parameters :mutable))) "nil)")))
  (catch* err (prn (str "Failed to load environment with error: " err))))

@@ -246,7 +246,7 @@
       (ChainLoader
        (Chain*
         ; if ethereum fragment is loaded use that
-        (if (contains? _args :fragment)
+        (if (or (contains? _args :fragment) (and (contains? _args :entity) (contains? _args :entity-id)))
           (str base-folder "immutable.tmp.edn")
           (str base-folder (get _parameters :immutable)))
 
@@ -267,7 +267,7 @@
        ; compress source to url format
        (->
         ; Don't save if we are running as fragment/entity player!
-        (if (not (contains? _args :fragment))
+        (if (not (or (contains? _args :fragment) (and (contains? _args :entity) (contains? _args :entity-id))))
           (->
             ; do some reflection to evaluate the chain
             ; mark as tainted if we access the internet
