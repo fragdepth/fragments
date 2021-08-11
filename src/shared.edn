@@ -12,6 +12,7 @@
 (defn __fetch-block-data [logic]
   (-> (| (Take "block-number") = .block-number)
       (| (Take "frag-hash") = .frag-hash)
+      (| (Take "expected-to") (String.ToLower) = .expected-to)
       (__eth-get-block-by-number .block-number) = .transactions
       (Sequence .result :Types Type.Bytes)
       .transactions
@@ -19,7 +20,7 @@
        (-> (ExpectTable)
            (| (Take "to") = .to)
            (| (Take "input") = .input)
-           .to (When (Is fragments)
+           .to (When (Is .expected-to)
                      (-> (Maybe logic)))))
       .result))
 
@@ -45,6 +46,16 @@
                           .mutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
                           (When (Is .frag-hash) (-> .mutableData >> .result
                                                     (Return))))))
+
+(defchain fetch-block-data-entity
+  (__fetch-block-data (-> .input
+                          (| (ExpectString) (Slice :From 10) = .call-input)
+                          (ExpectString) (Slice :To 10) (Log "method")
+                          (Match ["0xb726f71b" ; update
+                                  (-> .call-input (Eth.DecodeCall entity-abi "upload" true)
+                                      (Take 0) (ExpectBytes) >> .result
+                                      (Return))
+                                  nil nil]))))
      ; template eth_call
 (defn __eth-call [to data]
   (-> {"jsonrpc" "2.0"
@@ -73,23 +84,25 @@
      (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
      (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
      (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
-          ; fetch block with immutable data
+     ; fetch block with immutable data
      {"block-number" .immutable-block
-      "frag-hash" hash} (Do fetch-block-data-upload) = .first-result
+      "frag-hash" hash
+      "expected-to" fragments} (Do fetch-block-data-upload) = .first-result
      .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
                         (-> .first-result)
                         (->
                          .first-result (Take 0) >> .new-result
                          .hashBytes (Eth.EncodeCall frag-abi "mutableDataHashOf") (ToHex) > .callData
                          (__eth-call fragments .callData)
-                         (Eth.DecodeCall frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
+                         (Eth.DecodeCall frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .env-hash
                          {"block-number" .mutable-block
-                          "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
+                          "frag-hash" .env-hash
+                          "expected-to" fragments} (Do fetch-block-data-update) (Take 0) >> .new-result
                          .new-result)) (Set .frag-result "data")
      .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
      (__eth-call fragments .callData)
      (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
-     .frag-result (Log) (WriteFile (str base-folder "frag-cache/" hash) :Flush true))
+     .frag-result (WriteFile (str base-folder "frag-cache/" hash) :Flush true))
     :Silent true)))
 
 (defn frag [hash & args]
@@ -132,36 +145,30 @@
      (Take 0) (ExpectString) (Assert.Is fragments true)
 
      ; fetch template hash
-     [] (Eth.EncodeCall entity-abi "getTemplate") (ToHex) >= .callData
+     [] (Eth.EncodeCall entity-abi "getTemplate") (ToHex) > .callData
      (__eth-call contract .callData)
      (Eth.DecodeCall entity-abi "getTemplate")
-     (Take 0) (ExpectBytes) = .template-hash
+     (Take 0) (ExpectBytes) = .template-hash (Slice :From 12) (ToBase58) = .b58-template-hash
+     [.template-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
+     (__eth-call fragments .callData)
+     (Eth.DecodeCall frag-abi "dataOf")
+     (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
+     (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
+     ; fetch block with immutable data
+     {"block-number" .immutable-block
+      "frag-hash" .b58-template-hash
+      "expected-to" fragments} (Do fetch-block-data-upload) = .first-result
 
      ; NFT actual data associated with id
      id (BigInt) (BigInt.ToBytes) = .bid
-     [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) >= .callData
+     [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) > .callData
      (__eth-call contract .callData)
      (Eth.DecodeCall entity-abi "getData")
      (| (Take 0) (ExpectBytes) = .env-hash)
      (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
-     (Log)
-     ;; ; fetch block with immutable data
-     ;; {"block-number" .immutable-block
-     ;;  "frag-hash" hash} (Do fetch-block-data-upload) = .first-result
-     ;; .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
-     ;;                    (-> .first-result)
-     ;;                    (->
-     ;;                     .first-result (Take 0) >> .new-result
-     ;;                     .hashBytes (Eth.EncodeCall frag-abi "mutableDataHashOf") (ToHex) > .callData
-     ;;                     (__eth-call fragments .callData)
-     ;;                     (Eth.DecodeCall frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .envHash
-     ;;                     {"block-number" .mutable-block
-     ;;                      "frag-hash" .envHash} (Do fetch-block-data-update) (Take 0) >> .new-result
-     ;;                     .new-result)) (Set .frag-result "data")
-     ;; .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
-     ;; (__eth-call fragments .callData)
-     ;; (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
-     ;; .frag-result (Log) (WriteFile (str base-folder "frag-cache/" hash) :Flush true)
-     ;
-     )
+     {"block-number" .mutable-block
+      "frag-hash" .env-hash
+      "expected-to" contract} (Do fetch-block-data-entity) (Take 0) = .entity-data
+     [1 .entity-data] (Assoc .first-result)
+     .first-result (WriteFile (str base-folder "entity-cache/" contract "-" id) :Flush true))
     :Silent false)))
