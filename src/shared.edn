@@ -171,4 +171,4 @@
       "expected-to" contract} (Do fetch-block-data-entity) (Take 0) = .entity-data
      [1 .entity-data] (Assoc .first-result)
      .first-result (WriteFile (str base-folder "entity-cache/" contract "-" id) :Flush true))
-    :Silent false)))
+    :Silent true)))

@@ -3,7 +3,7 @@
 ; read and eval environment
 (try*
  (eval (read-string (str "(do " (slurp (if (or (contains? _args :fragment) (and (contains? _args :entity) (contains? _args :entity-id)))
-                                         (str base-folder "mutable.tmp.edn")
+                                         (str base-folder tmp-folder "mutable.tmp.edn")
                                          (get _parameters :mutable))) "nil)")))
  (catch* err (prn (str "Failed to load environment with error: " err))))
 
@@ -185,7 +185,8 @@
         loader (Chain (str name "-loader")
                       (dl-func hash false) = .model-data
                       (verify-bytes-hash "Model" kkhash)
-                      ".gltf-model.glb" (FS.Write .model-data :Overwrite true)
+                      (str base-folder tmp-folder ".gltf-model.glb") 
+                      (FS.Write .model-data :Overwrite true)
                       (GLTF.Load))]
                ; replace with detach and wait when we can share context
                ; in order to allow chain cleanup

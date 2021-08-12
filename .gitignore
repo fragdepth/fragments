@@ -3,6 +3,7 @@ src/ipfs-cache
 src/ar-cache
 src/frag-cache
 src/entity-cache
+src/tmp
 src/.gltf-model.glb
 src/live-chain-binary
 src/live-chain-env-binary
