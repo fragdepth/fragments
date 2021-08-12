@@ -10,8 +10,7 @@
                   :windowTitle (if (contains? _args :windowTitle) (get _args :windowTitle) "Fragment")
                   :windowWidth (if (contains? _args :windowWidth) (get _args :windowWidth) 1024)
                   :windowHeight (if (contains? _args :windowHeight) (get _args :windowHeight) 768)
-                  :isSVG false
-                  :xrSupported false
+                  :xrSupported (if (contains? _args :xrSupported) (get _args :xrSupported) false)
                   :gatewayURL (if (contains? _args :gateway) (get _args :gateway) "https://cloudflare-eth.com")})
 
 (if (not (= platform "emscripten"))
@@ -23,7 +22,7 @@
   ; else we are already running on emscripten
   (do
     ; TODO I think we can remove this.. need to test JS/WASM
-    (def base-folder "/.hasten/")))
+    (def base-folder "")))
 
 (def tmp-folder "tmp/")
 

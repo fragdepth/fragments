@@ -4,6 +4,7 @@ src/ar-cache
 src/frag-cache
 src/entity-cache
 src/tmp
+src/web
 src/.gltf-model.glb
 src/live-chain-binary
 src/live-chain-env-binary

@@ -1,42 +1,67 @@
-window.chainblocks = {};
-Parameters = {};
+window.chainblocks = {
+  singleThreadMode: false,
+};
+
+function vrFrame(_time, frame) {
+  const module = window.chainblocks.instance;
+  const session = frame.session;
+  session.chainblocks.frame = frame;
+  session.chainblocks.nextFrame = session.requestAnimationFrame(vrFrame);
+
+  module.dynCall_ii(module.CBCore.tick, window.chainblocks.node);
+  // -1.0 to avoid calling the internal sleep
+  module.dynCall_vdi(module.CBCore.sleep, -1.0, true);
+};
+
+function regularFrame() {
+  const module = window.chainblocks.instance;
+  window.chainblocks.nextFrame = requestAnimationFrame(regularFrame);
+
+  module.dynCall_ii(module.CBCore.tick, window.chainblocks.node);
+  // -1.0 to avoid calling the internal sleep
+  module.dynCall_vdi(module.CBCore.sleep, -1.0, true);
+};
 
 function restartChainblocksRunloop() {
-  // TODO maybe use window.requestAnimationFrame ?
-
   console.debug("Restarting chainblocks runloop.");
 
   if (window.ChainblocksWebXRSession) {
     const session = window.ChainblocksWebXRSession;
-    session.chainblocks.shouldContinue = false;
-    session.cancelAnimationFrame(session.chainblocks.nextFrame);
+    if (session.chainblocks.nextFrame)
+      session.cancelAnimationFrame(session.chainblocks.nextFrame);
+    session.chainblocks.nextFrame = null;
   }
 
-  const module = window.chainblocks.instance;
-  if (module.runloop) {
-    clearInterval(module.runloop);
-  }
-  module.runloop = setInterval(function () {
-    module.dynCall_ii(module.CBCore.tick, window.chainblocks.node);
-    // -1.0 to avoid calling the internal sleep
-    module.dynCall_vdi(module.CBCore.sleep, -1.0, true);
-  }, 16);
+  window.chainblocks.nextFrame = requestAnimationFrame(regularFrame);
 }
 
-async function _start() {
-  console.log("_start");
+function stopChainblocksRunloop() {
+  if (window.chainblocks.nextFrame) {
+    cancelAnimationFrame(window.chainblocks.nextFrame);
+    window.chainblocks.nextFrame = null;
+  }
+}
+
+function startChainblocksRunloop() {
+  restartChainblocksRunloop();
+}
+
+async function reloadCBL() {
+  window.chainblocks.loading = true;
+
+  stopChainblocksRunloop();
+
+  var parameters = {};
+
   if (window.chainblocks.mainScript === undefined) {
     const body = await fetch("entry.edn");
     window.chainblocks.mainScript = await body.text();
   }
 
-  const codeReq = await fetch("sample-gui1.edn");
-  const textCode = await codeReq.text();
-
   if (navigator && navigator.xr) {
-    Parameters.xrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+    parameters.xrSupported = await navigator.xr.isSessionSupported('immersive-vr');
   } else {
-    Parameters.xrSupported = false;
+    parameters.xrSupported = false;
   }
 
   window.chainblocks.canvasHolder = document.getElementById("canvas-holder");
@@ -46,30 +71,17 @@ async function _start() {
     window.chainblocks.canvas.remove();
   }
 
-  // https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas/OffscreenCanvas
-  // let offscreen = new OffscreenCanvas(256, 256);
-  // let gl = offscreen.getContext('webgl2');
+  var fullCanvasMode = false;
 
   // create canvas for rendering
   window.chainblocks.canvas = document.createElement("canvas");
   window.chainblocks.canvas.id = "canvas";
-  window.chainblocks.canvas.style = {};
-  window.chainblocks.canvasHolder.appendChild(window.chainblocks.canvas);
-  // THIS IS FAILING
-  let gl = window.chainblocks.canvas.getContext('webgl2'); // this is our already created bgfx context
-  window.chainblocks.glcontext = gl;
-
-  var templateCode = "";
-  const width = window.chainblocks.canvas.scrollWidth;
-  const height = window.chainblocks.canvas.scrollHeight;
-  // we need to re-set those here
-  Parameters.windowWidth = width;
-  Parameters.windowHeight = height;
-  Parameters.windowFullscreen = false;
-  const eparameters = `{:windowTitle "Hasten" :windowWidth ${Parameters.windowWidth} :windowHeight ${Parameters.windowHeight} :xrSupported ${Parameters.xrSupported} :isSVG true}`;
-  templateCode += "(def _parameters " + eparameters + ")\n";
-  templateCode += "(def _environment \"\")\n";
-  templateCode += window.chainblocks.mainScript;
+  window.addEventListener('resize', (e) => {
+    if (fullCanvasMode && window.chainblocks.canvas) {
+      window.chainblocks.canvas.style.width = window.chainblocks.canvasHolder.clientWidth + "px";
+      window.chainblocks.canvas.style.height = window.chainblocks.canvasHolder.clientHeight + "px";
+    }
+  });
 
   // remove cbl if exists
   if (window.chainblocks.instance) {
@@ -84,8 +96,36 @@ async function _start() {
 
   // setup cbl module
   window.chainblocks.instance = await window.cbl({
-    wasmBinary: window.cbl_binary,
-    postRun: function (module) {
+    wasmBinary: window.chainblocks.binary,
+    postRun: async function (module) {
+      window.chainblocks.loading = false;
+      window.chainblocks.canvasHolder.appendChild(window.chainblocks.canvas);
+
+      // // prompt for fullscreen
+      // if (isFullscreen) {
+      //   const modal = document.getElementById("fs-modal");
+      //   const ok = document.getElementById("fs-modal-ok");
+      //   const failed = document.getElementById("fs-modal-no");
+      //   var acceptPromise = new Promise(function (resolve, reject) {
+      //     failed.onclick = function () {
+      //       modal.style.display = "none";
+      //       resolve(false);
+      //     }
+      //     ok.onclick = async function () {
+      //       modal.style.display = "none";
+      //       try {
+      //         await window.chainblocks.canvas.requestFullscreen();
+      //         resolve(true);
+      //       } catch (e) {
+      //         reject(e);
+      //       }
+      //     }
+      //   });
+
+      //   modal.style.display = "block";
+      //   await acceptPromise;
+      // }
+
       // run on a clean stack
       setTimeout(function () {
         // this should nicely coincide with the first (run-empty-forever)'s sleep
@@ -100,36 +140,70 @@ async function _start() {
       }, 0);
     },
     preRun: async function (module) {
+      // TODO find a better solution that allows text inputs while editing too
       module.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas";
-      module.FS.mkdir("/.hasten/");
-      module.FS.writeFile("/.hasten/main.edn", textCode);
-      // if (base64Code != null) {
-      //   module.FS.writeFile("/.hasten/base64-script", base64Code);
-      // }
-      // if (binaryCode != null) {
-      //   var bytes = new Uint8Array(binaryCode.code);
-      //   module.FS.writeFile("/.hasten/binary-script", bytes);
-      //   if (binaryCode.environment) {
-      //     bytes = new Uint8Array(binaryCode.environment);
-      //     module.FS.writeFile("/.hasten/binary-environment", bytes);
-      //   }
+
+
+      module.FS.writeFile("/entry.edn", window.chainblocks.mainScript);
+
+      module.FS.createPreloadedFile("/", "FragmentEntity.json", "FragmentEntity.json", true, false);
+      module.FS.createPreloadedFile("/", "FragmentTemplate.json", "FragmentTemplate.json", true, false);
+      module.FS.createPreloadedFile("/", "utility.edn", "utility.edn", true, false);
+      module.FS.createPreloadedFile("/", "shared.edn", "shared.edn", true, false);
+      module.FS.createPreloadedFile("/", "mutable.edn", "mutable.edn", true, false);
+      module.FS.createPreloadedFile("/", "immutable.edn", "immutable.edn", true, false);
+
+      // // preload files
+      // module.FS.mkdir("/preload");
+      // module.FS.writeFile("/preload/entry.edn", templateCode);
+      // // shaders library
+      // module.FS.mkdir("/preload/shaders/");
+      // module.FS.mkdir("/preload/shaders/lib");
+      // module.FS.mkdir("/preload/shaders/lib/gltf");
+      // // these are needed in this module as well, as we compose the shader
+      // module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "ps_entry.h", "shaders/lib/gltf/ps_entry.h", true, false);
+      // module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "vs_entry.h", "shaders/lib/gltf/vs_entry.h", true, false);
+      // module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "varying.txt", "shaders/lib/gltf/varying.txt", true, false);
+      // module.FS.mkdir("/preload/shaders/cache");
+      // module.FS.mount(module.IDBFS, {}, "/preload/shaders/cache");
+      // module.FS.mkdir("/preload/shaders/tmp");
+
+      // mount persistent storage
+      module.FS.mkdir("/storage");
+      module.FS.mount(module.IDBFS, {}, "/storage");
+
+      // grab from current storage
+      await new Promise((resolve, reject) => {
+        // true == populate from the DB
+        module.FS.syncfs(true, function (err) {
+          if (err !== null) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      // start sync loop to allow persistent storage
+      if (window.chainblocks.syncfs) {
+        clearInterval(window.chainblocks.syncfs);
+      }
+
+      window.chainblocks.syncfs = setInterval(function () {
+        // false == write from mem to the DB
+        module.FS.syncfs(false, function (err) {
+          if (err)
+            throw err;
+        });
+      }, 2000);
+
+      // window.chainblocks.previewScreenShot = function () {
+      //   const screenshotBytes = module.FS.readFile("/.hasten/screenshot.png");
+      //   saveByteArray("screenshot.png", screenshotBytes);
       // }
 
-      // preload files
-      module.FS.mkdir("/preload");
-      module.FS.writeFile("/preload/entry.edn", templateCode);
-      // shaders library
-      module.FS.mkdir("/preload/shaders/");
-      module.FS.mkdir("/preload/shaders/lib");
-      module.FS.mkdir("/preload/shaders/lib/gltf");
-      // these are needed in this module as well, as we compose the shader
-      module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "ps_entry.h", "shaders/lib/gltf/ps_entry.h", true, false);
-      module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "vs_entry.h", "shaders/lib/gltf/vs_entry.h", true, false);
-      module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "varying.txt", "shaders/lib/gltf/varying.txt", true, false);
-      module.FS.mkdir("/preload/shaders/cache");
-      module.FS.mkdir("/preload/shaders/tmp");
-      // mount persistent storage - NOT AVAIL IN SVG
-      module.FS.mkdir("/storage");
+      // screenshotSetup();
+      // videoCaptureSetup();
     },
     print: (function () {
       return function (text) {
@@ -156,6 +230,36 @@ async function _start() {
 
       return window.chainblocks.canvas;
     })(),
-    arguments: ["/preload/entry.edn"]
+    arguments: ["/entry.edn"]
   });
+}
+
+async function _start() {
+  console.log("_start");
+
+  // use mt if possible
+  // cache wasm module
+  if (window.chainblocks.binary === undefined) {
+    var cblScript = "web/cbl-st.js";
+    if (!window.chainblocks.singleThreadMode && typeof SharedArrayBuffer !== "undefined" && typeof Atomics !== "undefined") {
+      cblScript = "web/cbl-mt.js";
+      const response = await fetch("web/cbl-mt.wasm");
+      const buffer = await response.arrayBuffer();
+      window.chainblocks.binary = new Uint8Array(buffer);
+    } else {
+      const response = await fetch("web/cbl-st.wasm");
+      const buffer = await response.arrayBuffer();
+      window.chainblocks.binary = new Uint8Array(buffer);
+    }
+  }
+
+  // load cbl
+  const cbl = document.createElement("script");
+  cbl.src = cblScript;
+  cbl.async = true;
+  cbl.onload = async function () {
+    // finally start cbl
+    await reloadCBL();
+  };
+  document.body.appendChild(cbl);
 }

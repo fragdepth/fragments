@@ -1,5 +1,9 @@
 ; script self-host web version
 
+; need those for multi-threading wasm
+(def headers {"Cross-Origin-Opener-Policy" "same-origin"
+              "Cross-Origin-Embedder-Policy" "require-corp"})
+
 (defnode Root)
 
 (defloop handler ; must be loop!
@@ -8,9 +12,9 @@
   ; extremely simple - don't use it in production
   (Log "target")
   (Match ["/"
-          (-> "/index.html" (Http.SendFile))
+          (-> "/index.html" (Http.SendFile headers))
           nil
-          (-> (Http.SendFile))]))
+          (-> (Http.SendFile headers))]))
 
 (defloop main
   (Http.Server handler))

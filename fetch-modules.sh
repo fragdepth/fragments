@@ -1,6 +1,8 @@
 IPFS_SHADERC_WASI="bafybeif5juuskzbygggzexxwdbo265b777vpx3uxgeu4joiqkdpekdazji"
 IPFS_SHADERC_EXE="QmaTmrmDjxWeSCpgPAXWCSaC8wzqhBh46sSZuQ7ReNsYiZ"
 IPFS_SHADERS="QmTJQYQuGnLx1iESXrCUjJnFKrdWn4TcFRr6dgsnYxUxeH"
+IPFS_CBL_MT="QmS7baKUDsKgZqPRo96HNeXVvEBLgrXLFYgQ2Q74sHpTMo"
+IPFS_CBL_ST="QmNkVxDgxZsDEM5epT3zT2zgTYU78wwstNHBh3BpAgxqQV"
 
 mkdir -p src/shaders/lib/gltf
 mkdir -p src/shaders/include
@@ -20,3 +22,10 @@ curl https://ipfs.io/ipfs/$IPFS_SHADERS/gltf/varying.txt --output src/shaders/li
 curl https://ipfs.io/ipfs/$IPFS_SHADERS/include/implicit_shapes.h --output src/shaders/include/implicit_shapes.h
 curl https://ipfs.io/ipfs/$IPFS_SHADERS/include/noise.h --output src/shaders/include/noise.h
 curl https://ipfs.io/ipfs/$IPFS_SHADERS/include/ShaderFastMathLib.h --output src/shaders/include/ShaderFastMathLib.h
+
+curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.wasm --output src/web/cbl-mt.wasm
+curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.js --output src/web/cbl-mt.js
+curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.worker.js --output src/web/cbl-mt.worker.js
+
+curl https://ipfs.io/ipfs/$IPFS_CBL_ST/cbl-st.wasm --output src/web/cbl-st.wasm
+curl https://ipfs.io/ipfs/$IPFS_CBL_ST/cbl-st.js --output src/web/cbl-st.js
