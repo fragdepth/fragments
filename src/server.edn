@@ -1,0 +1,19 @@
+; script self-host web version
+
+(defnode Root)
+
+(defloop handler ; must be loop!
+  (Http.Read) = .request
+  (Take "target")
+  ; extremely simple - don't use it in production
+  (Log "target")
+  (Match ["/"
+          (-> "/index.html" (Http.SendFile))
+          nil
+          (-> (Http.SendFile))]))
+
+(defloop main
+  (Http.Server handler))
+
+(schedule Root main)
+(run Root 0.1)
