@@ -125,7 +125,7 @@
      .frag-result (WriteFile (str base-folder "frag-cache/" hash) :Flush true))
     :Silent true)))
 
-(defn frag [hash & args]
+(defn __frag [hash & args]
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
         node (Node)
@@ -133,7 +133,7 @@
                      (__frag-load-cached hash)
                      (Log "Fragment loaded")
                      (Take "data")
-                     (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) >> .fragment-result)
+                     (| (Take 0) (Brotli.Decompress) (FromBytes) >> .fragment-result)
                      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
                      .fragment-result)
         code (do
@@ -142,32 +142,14 @@
                     ; stop returns the text code
                (stop chain))
         ast (read-var code)
-        immutable (str "(-> " (first ast) ")")
+        ; can be either String or Bytes (if bytes it's a binary asset)
+        immutable (if (string? (first ast)) (str "(-> " (first ast) ")") (first ast))
         mutable (str "(do " (nth ast 1) ")")]
     (if load-env (eval (read-string mutable)))
-    (eval (read-string immutable))))
+    ; can be either String or Bytes (if bytes it's a binary asset and so pass as it is)
+    (if (string? immutable) (eval (read-string immutable)) immutable)))
 
-(defn bfrag [hash & args]
-  (let [load-env (if (not (nil? (first args))) (first args) false)
-        params (if (not (nil? (first (rest args)))) (first (rest args)) {})
-        node (Node)
-        chain (Chain "downloader"
-                     (__frag-load-cached hash)
-                     (Log "Fragment loaded")
-                     (Take "data")
-                     (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectBytes) >> .fragment-result)
-                     (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
-                     .fragment-result)
-        code (do
-               (schedule node chain)
-               (run node 0.1)
-                    ; stop returns the text code
-               (stop chain))
-        ast (read-var code)
-        immutable (first ast)
-        mutable (str "(do " (nth ast 1) ")")]
-    (if load-env (eval (read-string mutable)))
-    immutable))
+(defmacro! frag (fn* [hash & args] `(__frag ~(str hash) ~@args)))
 
 (defn __entity-load-cached [contract id]
   (->
