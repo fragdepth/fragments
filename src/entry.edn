@@ -18,14 +18,10 @@
   (do
     ; fix some incompatibilities with emscripten
     (def _Emscripten.Eval Pass)
-    (def _Emscripten.EvalAsync Pass)
-    (def base-folder ""))
-  ; else we are already running on emscripten
-  (do
-    ; TODO I think we can remove this.. need to test JS/WASM
-    (def base-folder "")))
+    (def _Emscripten.EvalAsync Pass)))
 
 (def tmp-folder "tmp/")
+(def base-folder "")
 
 (def ipfs-gateway "https://ipfs.io")
 (def ar-gateway "https://arweave.net")
