@@ -1,3 +1,5 @@
+(def _args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
+
 ; parameters
 (def ipfs-runtime "QmSjdpXYK97ULFuryb7eoxCCVUHFQpH4pxUcXbxswiyqwb")
 (def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
@@ -8,23 +10,45 @@
 (def template-abi (slurp "src/FragmentTemplate.json"))
 (def entity-abi (slurp "src/FragmentEntity.json"))
 
-(defchain template-minter
-  "src/live-chain-binary" (FS.Read :Bytes true) = .immutableData
-  "src/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
-  ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
-  include-cost (BigInt) (BigInt.ToBytes) = .includeCost
-  [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
-  (Eth.EncodeCall template-abi "upload")
-  (ToHex) (Log "Call Input"))
-
-(defchain entity-minter
-  "src/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
-  entity-amount (BigInt) (BigInt.ToBytes) = .entityAmount
-  [.mutableData .entityAmount]
-  (Eth.EncodeCall entity-abi "upload")
-  (ToHex) (Log "Call Input"))
-
 (defnode main)
-(schedule main template-minter)
-(schedule main entity-minter)
+
+(if (empty? *command-line-args*)
+  (do
+    ; code/script, use working directory artifacts
+    (defchain template-minter
+      "src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
+      "src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
+      include-cost (BigInt) (BigInt.ToBytes) = .includeCost
+      [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
+      (Eth.EncodeCall template-abi "upload")
+      (Log)
+      (ToHex) (Log "Call Input"))
+
+    (defchain entity-minter
+      "src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      entity-amount (BigInt) (BigInt.ToBytes) = .entityAmount
+      [.mutableData .entityAmount]
+      (Eth.EncodeCall entity-abi "upload")
+      (ToHex) (Log "Call Input"))
+
+    (schedule main template-minter)
+    (schedule main entity-minter))
+  (do
+    ; file passed as argument
+    (defchain store-file
+      (first *command-line-args*) (FS.Read :Bytes true) = .data
+      ; serialize in our format
+      .data (ToBytes) = .immutableData
+      ; we still use artifact env
+      "src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
+      include-cost (BigInt) (BigInt.ToBytes) = .includeCost
+      [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
+      (Eth.EncodeCall template-abi "upload")
+      (Log)
+      (ToHex) (Log "Call Input"))
+    
+    (schedule main store-file)))
+
 (run main)

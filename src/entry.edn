@@ -43,31 +43,32 @@
 
 ; ipfs uploader
 (defn _upload-to-ipfs [type type-name]
-  (Chain (str "upload" type-name "-to-ipfs")
-         (let [boundary "----CB-IPFS-Upload-0xC0FFEE"
-               gateways (vector "https://ipfs.infura.io:5001"
-                                "https://ipfs.komputing.org")]
-           (->
-            >= .payload
-            (str "--" boundary
-                 "\r\nContent-Disposition: form-data; name=\"path\"\r\nContent-Type: "
-                 type "\r\n\r\n")
-            (PrependTo .payload)
-            (str "\r\n--" boundary "--")
-            (AppendTo .payload)
-            gateways
-            (TryMany
-             (Chain
-              "IPFS-Upload"
-              >= .gateway
-              "/api/v0/add?pin=true" (AppendTo .gateway)
-              .payload
-              (Http.Post .gateway
-                         :Headers {"Content-Type" (str "multipart/form-data; boundary=" boundary)}
-                         :Timeout 60))
-             :Policy WaitUntil.SomeSuccess)
-            (Take 0) (FromJson) (ExpectTable)
-            (Take "Hash") (ExpectString)))))
+  (Chain
+   (str "upload" type-name "-to-ipfs")
+   (let [boundary "----CB-IPFS-Upload-0xC0FFEE"
+         gateways (vector "https://ipfs.infura.io:5001"
+                          "https://ipfs.komputing.org")]
+     (->
+      >= .payload
+      (str "--" boundary
+           "\r\nContent-Disposition: form-data; name=\"path\"\r\nContent-Type: "
+           type "\r\n\r\n")
+      (PrependTo .payload)
+      (str "\r\n--" boundary "--")
+      (AppendTo .payload)
+      gateways
+      (TryMany
+       (Chain
+        "IPFS-Upload"
+        >= .gateway
+        "/api/v0/add?pin=true" (AppendTo .gateway)
+        .payload
+        (Http.Post .gateway
+                   :Headers {"Content-Type" (str "multipart/form-data; boundary=" boundary)}
+                   :Timeout 60))
+       :Policy WaitUntil.SomeSuccess)
+      (Take 0) (FromJson) (ExpectTable)
+      (Take "Hash") (ExpectString)))))
 (def upload-bytes-to-ipfs (_upload-to-ipfs "application/octet-stream" "bytes"))
 (def upload-png-to-ipfs (_upload-to-ipfs "image/png" "png"))
 (def upload-webm-to-ipfs (_upload-to-ipfs "video/webm" "webm"))
@@ -311,12 +312,13 @@
                  (->
                   .sparams)
                  :Silent true))]) = .ugly-code
-                  ; enviruments are not hashed here, so we can add structured data
-                  ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
+             ; enviruments are not hashed here, so we can add structured data
+             ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")
              (get _parameters :windowHeight) (Set .environment "h")
-             (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e"); compress and write
+             (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e") 
+             ; compress and write
              .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
              .local-fragment (Set .frag-data "data")
