@@ -1,12 +1,23 @@
 ; template eth_getBlockByNumber call
-(defn __eth-get-block-by-number [block-number]
-  (-> {"jsonrpc" "2.0"
-       "method" "eth_getBlockByNumber"
-       "params" [block-number true]
-       "id" 1} (ToJson)
-      (Http.Post (get _parameters :gatewayURL)
-                 :Timeout 60) (FromJson)
-      (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq)))
+(if (get _parameters :metamask)
+  (defn __eth-get-block-by-number [block-number]
+    (->
+     (Msg "eth_getBlockByNumber")
+     "(async () => { const res = await ethereum.request(" >= .request
+     {"method" "eth_getBlockByNumber"
+      "params" [block-number true]} (ToJson) (AppendTo .request)
+     "); return JSON.stringify(res); })()" (AppendTo .request)
+     .request (_Emscripten.EvalAsync) (FromJson)
+     (ExpectTable) (Take "transactions") (ExpectSeq)))
+  (defn __eth-get-block-by-number [block-number]
+    (->
+     {"jsonrpc" "2.0"
+      "method" "eth_getBlockByNumber"
+      "params" [block-number true]
+      "id" 1} (ToJson)
+     (Http.Post (get _parameters :gatewayURL)
+                :Timeout 60) (FromJson)
+     (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq))))
 
      ; template for block data fetching
 (defn __fetch-block-data [logic]
@@ -57,14 +68,22 @@
                                       (Return))
                                   nil nil]))))
      ; template eth_call
-(defn __eth-call [to data]
-  (-> {"jsonrpc" "2.0"
-       "method" "eth_call"
-       "params" [{"to" to "data" data} "latest"]
-       "id" 1} (ToJson)
-      (Http.Post (get _parameters :gatewayURL)
-                 :Timeout 60) (FromJson)
-      (ExpectTable) (Take "result") (ExpectString)))
+(if (get _parameters :metamask)
+  (defn __eth-call [to data]
+    (->
+     "ethereum.request(" >= .request
+     {"method" "eth_call"
+      "params" [{"to" to "data" data} "latest"]} (ToJson) (AppendTo .request)
+     ")" (AppendTo .request)
+     .request (_Emscripten.EvalAsync)))
+  (defn __eth-call [to data]
+    (-> {"jsonrpc" "2.0"
+         "method" "eth_call"
+         "params" [{"to" to "data" data} "latest"]
+         "id" 1} (ToJson)
+        (Http.Post (get _parameters :gatewayURL)
+                   :Timeout 60) (FromJson)
+        (ExpectTable) (Take "result") (ExpectString))))
 
 ; utility function to load from chain or cache fragments
 (defn __frag-load-cached [hash]

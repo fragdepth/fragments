@@ -13,3 +13,8 @@ chainblocks*.log
 src/immutable.tmp.edn
 .vscode/launch.json
 src/mutable.tmp.edn
+src/cbl-mt.js
+src/cbl-mt.wasm
+src/cbl-mt.worker.js
+src/cbl-st.js
+src/cbl-st.wasm

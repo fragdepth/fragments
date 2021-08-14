@@ -25,8 +25,8 @@ function regularFrame() {
 function restartChainblocksRunloop() {
   console.debug("Restarting chainblocks runloop.");
 
-  if (window.ChainblocksWebXRSession) {
-    const session = window.ChainblocksWebXRSession;
+  if (window.chainblocks.WebXRSession) {
+    const session = window.chainblocks.WebXRSession;
     if (session.chainblocks.nextFrame)
       session.cancelAnimationFrame(session.chainblocks.nextFrame);
     session.chainblocks.nextFrame = null;
@@ -40,10 +40,6 @@ function stopChainblocksRunloop() {
     cancelAnimationFrame(window.chainblocks.nextFrame);
     window.chainblocks.nextFrame = null;
   }
-}
-
-function startChainblocksRunloop() {
-  restartChainblocksRunloop();
 }
 
 async function reloadCBL() {
@@ -71,13 +67,13 @@ async function reloadCBL() {
     window.chainblocks.canvas.remove();
   }
 
-  var fullCanvasMode = false;
-
   // create canvas for rendering
   window.chainblocks.canvas = document.createElement("canvas");
   window.chainblocks.canvas.id = "canvas";
+  window.chainblocks.canvas.style.width = window.chainblocks.canvasHolder.clientWidth + "px";
+  window.chainblocks.canvas.style.height = window.chainblocks.canvasHolder.clientHeight + "px";
   window.addEventListener('resize', (e) => {
-    if (fullCanvasMode && window.chainblocks.canvas) {
+    if (window.chainblocks.canvas) {
       window.chainblocks.canvas.style.width = window.chainblocks.canvasHolder.clientWidth + "px";
       window.chainblocks.canvas.style.height = window.chainblocks.canvasHolder.clientHeight + "px";
     }
@@ -128,6 +124,7 @@ async function reloadCBL() {
 
       // run on a clean stack
       setTimeout(function () {
+        console.log("Starting main node");
         // this should nicely coincide with the first (run-empty-forever)'s sleep
         let node = module.dynCall_i(module.CBCore.createNode);
         window.chainblocks.node = node;
@@ -230,7 +227,7 @@ async function reloadCBL() {
 
       return window.chainblocks.canvas;
     })(),
-    arguments: ["/entry.edn"]
+    arguments: ["/entry.edn", "{:entity \"0x16cD316D75EBAfC368E5633ee3CD4e032b099038\" :entity-id 2 :metamask true}"]
   });
 }
 
@@ -240,14 +237,14 @@ async function _start() {
   // use mt if possible
   // cache wasm module
   if (window.chainblocks.binary === undefined) {
-    var cblScript = "web/cbl-st.js";
+    var cblScript = "cbl-st.js";
     if (!window.chainblocks.singleThreadMode && typeof SharedArrayBuffer !== "undefined" && typeof Atomics !== "undefined") {
-      cblScript = "web/cbl-mt.js";
-      const response = await fetch("web/cbl-mt.wasm");
+      cblScript = "cbl-mt.js";
+      const response = await fetch("cbl-mt.wasm");
       const buffer = await response.arrayBuffer();
       window.chainblocks.binary = new Uint8Array(buffer);
     } else {
-      const response = await fetch("web/cbl-st.wasm");
+      const response = await fetch("cbl-st.wasm");
       const buffer = await response.arrayBuffer();
       window.chainblocks.binary = new Uint8Array(buffer);
     }

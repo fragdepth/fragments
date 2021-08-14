@@ -11,6 +11,7 @@
                   :windowWidth (if (contains? _args :windowWidth) (get _args :windowWidth) 1024)
                   :windowHeight (if (contains? _args :windowHeight) (get _args :windowHeight) 768)
                   :xrSupported (if (contains? _args :xrSupported) (get _args :xrSupported) false)
+                  :metamask (if (contains? _args :metamask) (get _args :metamask) false)
                   :gatewayURL (if (contains? _args :gateway) (get _args :gateway) "https://cloudflare-eth.com")})
 
 (if (not (= platform "emscripten"))
@@ -227,6 +228,7 @@
       (FS.Write .loaded-fragment-mutable :Overwrite true)))
 
    ; our main routine, manage a bgfx window and a chain loader
+   (println (str "Width " (get _parameters :windowWidth) " Height " (get _parameters :windowHeight)))
    (GFX.MainWindow
     :Title (get _parameters :windowTitle)
     :Width (get _parameters :windowWidth) :Height (get _parameters :windowHeight)
@@ -287,7 +289,7 @@
            (Match [true (-> "globalThis.chainblocks.tainted = true" (_Emscripten.Eval))
                    false (-> "globalThis.chainblocks.tainted = false" (_Emscripten.Eval))])
             ; unlock the next update
-           "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)
+          ;;  "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)
             ; source
            (str base-folder (get _parameters :immutable))
            (When
@@ -341,12 +343,14 @@
                            (str base-folder "frag-cache/") >= .cached-name
                            .b58-eth-id (AppendTo .cached-name)
                            .frag-data (WriteFile .cached-name :Flush true)))
-                   "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)))
+                  ;;  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)
+                   ))
              (Count .compressed-bytes) (Log "compressed source size")
              (Count .compressed-env) (Log "compressed env size"))))))
-       :OnError
-       (-> ; unlock the next update
-        "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval)))
+      ;;  :OnError
+      ;;  (-> ; unlock the next update
+      ;;   "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval))
+       )
       ; if chain fails pause a bit
       (->
        (Pause 2.0)))))))
@@ -354,20 +358,7 @@
 (if (= platform "emscripten")
   (do
     ; this one is ticked and scheduled from the JS side
-    (set-global-chain Main)
-    (decompress-strings)
-    (let [Root (Node)
-          blocks-info
-          (let [info (map (fn* [name] {:name name :info (info name)}) (blocks))]
-            (pr-str info))]
-      (schedule
-       Root
-       (Chain
-        "fill-blocks-info"
-        ; write blocks info
-        (str base-folder tmp-folder "blocks-info")
-        (FS.Write blocks-info)))
-      (run Root)))
+    (set-global-chain Main))
   ; else
   (do
     (println "Starting")
