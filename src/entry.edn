@@ -10,6 +10,7 @@
                   :windowTitle (if (contains? _args :windowTitle) (get _args :windowTitle) "Fragment")
                   :windowWidth (if (contains? _args :windowWidth) (get _args :windowWidth) 1024)
                   :windowHeight (if (contains? _args :windowHeight) (get _args :windowHeight) 768)
+                  :clearColor (if (contains? _args :clearColor) (get _args :clearColor) [7 7 7 255])
                   :xrSupported (if (contains? _args :xrSupported) (get _args :xrSupported) false)
                   :metamask (if (contains? _args :metamask) (get _args :metamask) false)
                   :gatewayURL (if (contains? _args :gateway) (get _args :gateway) "https://cloudflare-eth.com")})
@@ -229,7 +230,10 @@
    (GFX.MainWindow
     :Title (get _parameters :windowTitle)
     :Width (get _parameters :windowWidth) :Height (get _parameters :windowHeight)
-    :ClearColor (Color 7 7 7 255)
+    :ClearColor (Color (nth (get _parameters :clearColor) 0)
+                       (nth (get _parameters :clearColor) 1)
+                       (nth (get _parameters :clearColor) 2)
+                       (nth (get _parameters :clearColor) 3))
     ; prefer doing fullscreen setup JS side
     :Contents
     (->

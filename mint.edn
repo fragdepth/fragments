@@ -44,7 +44,7 @@
     (defchain store-file
       (first *command-line-args*) (FS.Read :Bytes true) = .data
       ; serialize in our format
-      .data (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData (Hash.Keccak-256) (Slice :From 12) (ToBase58) = .frag-hash
+      .data (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData (Hash.Keccak-256) (Slice :From 12) (ToBase58) (Log "hash") = .frag-hash
       ; we still use artifact env
       file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
       ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
