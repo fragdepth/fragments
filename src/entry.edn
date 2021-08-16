@@ -25,7 +25,7 @@
 (def base-folder "")
 
 (def ipfs-gateway "https://ipfs.io")
-(def ar-gateway "https://arweave.net")
+(def ar-gateway "https://coldcdn.com/api/cdn/arweave")
 (def fragments "0x7777014b5b09d56299cb0c4b2e23abd61e8a8a65")
 
 (def frag-abi (slurp "FragmentTemplate.json"))

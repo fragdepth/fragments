@@ -136,8 +136,8 @@
            (WriteFile (str base-folder "ar-cache/" tx (if full "F" "B")) :Flush true))
           :Silent true)))
 
-(defmacro! ar (fn* [tx] ['__ar-load-cached (str tx)]))
-(defmacro! ipfs (fn* [cid] ['__ipfs-load-cached (str cid)]))
+(defmacro! ar (fn* [tx] ['__ar-load-cached tx]))
+(defmacro! ipfs (fn* [cid] ['__ipfs-load-cached cid]))
 
 ; utility bytes fetcher from ipfs or arweave with optional full payload (headers, status etc)
 (defn fetch [file & full]

@@ -125,7 +125,7 @@
      .frag-result (WriteFile (str base-folder "frag-cache/" hash) :Flush true))
     :Silent true)))
 
-(defn __frag [hash & args]
+(defn frag [hash & args]
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
         node (Node)
@@ -148,8 +148,6 @@
     (if load-env (eval (read-string mutable)))
     ; can be either String or Bytes (if bytes it's a binary asset and so pass as it is)
     (if (string? immutable) (eval (read-string immutable)) immutable)))
-
-(defmacro! frag (fn* [hash & args] `(__frag ~(str hash) ~@args)))
 
 (defn __entity-load-cached [contract id]
   (->

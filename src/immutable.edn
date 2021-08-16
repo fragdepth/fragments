@@ -1,10 +1,10 @@
 ; setup resources
 (Setup
   ; include a gltf model from ipfs
- (Model .scan (ipfs QmWwLhts2q2a17YWV3hzsvipBeeUXZ8roC3UrG8CjUxjEo))
+ (Model .scan (ipfs "QmWwLhts2q2a17YWV3hzsvipBeeUXZ8roC3UrG8CjUxjEo"))
 
- (fetch (ar _5_egvizY4aJp-DGK7zdPxAZ641L2RGguXrvocJYGdI) true) (Log)
- (fetch (ipfs QmWwLhts2q2a17YWV3hzsvipBeeUXZ8roC3UrG8CjUxjEo) true) (Log)
+ (fetch (ar "_5_egvizY4aJp-DGK7zdPxAZ641L2RGguXrvocJYGdI") true) (Log)
+ (fetch (ipfs "QmWwLhts2q2a17YWV3hzsvipBeeUXZ8roC3UrG8CjUxjEo") true) (Log)
 
  (Float3 100 100 100) (Math.Scaling) = .s
  (Float3 0 -5 -15) (Math.Translation) = .t
