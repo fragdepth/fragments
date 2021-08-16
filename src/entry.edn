@@ -28,8 +28,8 @@
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
 (def fragments "0x7777014b5b09d56299cb0c4b2e23abd61e8a8a65")
 
-(def frag-abi (slurp "FragmentTemplate.json"))
-(def entity-abi (slurp "FragmentEntity.json"))
+(def frag-abi (slurp (str base-folder "FragmentTemplate.json")))
+(def entity-abi (slurp (str base-folder "FragmentEntity.json")))
 
 (load-file (str base-folder "shared.edn"))
 
