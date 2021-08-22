@@ -93,7 +93,7 @@
    (Maybe
     (->
      ; TODO, decide how to flag cached content for update after a mutation happened
-     (ReadFile (str base-folder "frag-cache/" hash))
+     (ReadFile (str base-folder "cache/frag/" hash))
      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
     (-> ; download worst case scenario
      hash (Log "Downloading")
@@ -122,7 +122,7 @@
      .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
      (__eth-call fragments .callData)
      (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
-     .frag-result (WriteFile (str base-folder "frag-cache/" hash) :Flush true))
+     .frag-result (WriteFile (str base-folder "cache/frag/" hash) :Flush true))
     :Silent true)))
 
 (defn frag [hash & args]
@@ -133,13 +133,15 @@
                      (__frag-load-cached hash)
                      (Log "Fragment loaded")
                      (Take "data")
-                     (| (Take 0) (Brotli.Decompress) (FromBytes) >> .fragment-result)
-                     (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
+                     (| (Take 0) (Brotli.Decompress) (FromBytes) 
+                        (ExpectTable) (Take "_") (ExpectString) >> .fragment-result)
+                     (| (Take 1) (Brotli.Decompress) (FromBytes) 
+                        (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
                      .fragment-result)
         code (do
                (schedule node chain)
                (run node 0.1)
-                    ; stop returns the text code
+               ; stop returns the text code
                (stop chain))
         ast (read-var code)
         ; can be either String or Bytes (if bytes it's a binary asset)
@@ -153,7 +155,7 @@
   (->
    (Maybe
     (->
-     (ReadFile (str base-folder "entity-cache/" contract "-" id))
+     (ReadFile (str base-folder "cache/entity/" contract "-" id))
      (ExpectBytesSeq)
      ;; (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true)
      )
@@ -190,5 +192,5 @@
       "frag-hash" .env-hash
       "expected-to" contract} (Do fetch-block-data-entity) (Take 0) = .entity-data
      [1 .entity-data] (Assoc .first-result)
-     .first-result (WriteFile (str base-folder "entity-cache/" contract "-" id) :Flush true))
+     .first-result (WriteFile (str base-folder "cache/entity/" contract "-" id) :Flush true))
     :Silent true)))

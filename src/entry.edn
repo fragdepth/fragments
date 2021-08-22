@@ -24,7 +24,7 @@
 (def tmp-folder "tmp/")
 (def base-folder "")
 
-(def ipfs-gateway "https://ipfs.io")
+(def ipfs-gateway "https://cloudflare-ipfs.com")
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
 (def fragments "0x7777014b5b09d56299cb0c4b2e23abd61e8a8a65")
 
@@ -207,7 +207,7 @@
       ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
       (__frag-load-cached (get _args :fragment))
       (Take "data")
-      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) = .loaded-fragment-immutable)
+      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "_") (ExpectString) = .loaded-fragment-immutable)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
       (str base-folder tmp-folder "immutable.tmp.edn")
       (FS.Write .loaded-fragment-immutable :Overwrite true)
@@ -218,7 +218,7 @@
      (Setup
       ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
       (__entity-load-cached (get _args :entity) (get _args :entity-id))
-      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectString) = .loaded-fragment-immutable)
+      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "_") (ExpectString) = .loaded-fragment-immutable)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
       (str base-folder tmp-folder "immutable.tmp.edn")
       (FS.Write .loaded-fragment-immutable :Overwrite true)
@@ -315,7 +315,7 @@
                   .sres)
                  (->
                   .sparams)
-                 :Silent true))]) = .ugly-code
+                 :Silent true))]) (Set .fs "_") ; main script = _
              ; enviruments are not hashed here, so we can add structured data
              ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
              (get _parameters :windowTitle) (Set .environment "t")
@@ -323,7 +323,7 @@
              (get _parameters :windowHeight) (Set .environment "h")
              (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e") 
              ; compress and write
-             .ugly-code (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
+             .fs (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
              .local-fragment (Set .frag-data "data")
              (get _parameters :owner) (Set .frag-data "owner")
@@ -342,7 +342,7 @@
                            (str base-folder tmp-folder "live-chain-eth-id")
                            (FS.Write .b58-eth-id :Overwrite true)
                             ; also cache locally in order to load it from other files!
-                           (str base-folder "frag-cache/") >= .cached-name
+                           (str base-folder "cache/frag/") >= .cached-name
                            .b58-eth-id (AppendTo .cached-name)
                            .frag-data (WriteFile .cached-name :Flush true)))
                   ;;  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)

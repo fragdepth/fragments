@@ -1,8 +1,5 @@
 src/shaders
-src/ipfs-cache
-src/ar-cache
-src/frag-cache
-src/entity-cache
+src/cache
 src/tmp
 src/web
 src/.gltf-model.glb

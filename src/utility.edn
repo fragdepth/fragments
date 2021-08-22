@@ -107,7 +107,7 @@
 (defn __ipfs-load-cached [hash full]
   (->
    (Maybe (->
-           (ReadFile (str base-folder "ipfs-cache/" hash (if full "F" "B")))
+           (ReadFile (str base-folder "cache/ipfs/" hash (if full "F" "B")))
            (if full 
              (ExpectLike __downloader-chain-template :Unsafe true)
              (ExpectBytes)))
@@ -117,13 +117,13 @@
                          :Bytes true
                          :FullResponse full
                          :Timeout 60)
-           (WriteFile (str base-folder "ipfs-cache/" hash (if full "F" "B")) :Flush true))
+           (WriteFile (str base-folder "cache/ipfs/" hash (if full "F" "B")) :Flush true))
           :Silent true)))
 
 (defn __ar-load-cached [tx full]
   (->
    (Maybe (->
-           (ReadFile (str base-folder "ar-cache/" tx (if full "F" "B")))
+           (ReadFile (str base-folder "cache/ar/" tx (if full "F" "B")))
            (if full
              (ExpectLike __downloader-chain-template :Unsafe true)
              (ExpectBytes)))
@@ -133,7 +133,7 @@
                          :Bytes true
                          :FullResponse full
                          :Timeout 60)
-           (WriteFile (str base-folder "ar-cache/" tx (if full "F" "B")) :Flush true))
+           (WriteFile (str base-folder "cache/ar/" tx (if full "F" "B")) :Flush true))
           :Silent true)))
 
 (defmacro! ar (fn* [tx] ['__ar-load-cached tx]))

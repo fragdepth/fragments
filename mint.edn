@@ -42,9 +42,11 @@
   (do
     ; file passed as argument
     (defchain store-file
-      (first *command-line-args*) (FS.Read :Bytes true) = .data
+      (first *command-line-args*) = .file-name (FS.Read :Bytes true) = .file-data
       ; serialize in our format
-      .data (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData (Hash.Keccak-256) (Slice :From 12) (ToBase58) (Log "hash") = .frag-hash
+      .file-data (Set .fs .file-name) ; organize in a table
+      .fs (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData 
+      (Hash.Keccak-256) (Slice :From 12) (ToBase58) (Log "hash") = .frag-hash
       ; we still use artifact env
       file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
       ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
@@ -53,7 +55,7 @@
       (Eth.EncodeCall template-abi "upload")
       (Log)
       (ToHex) (Log "Call Input")
-      "src/frag-cache/" >= .filename
+      "src/cache/frag/" >= .filename
       .frag-hash (AppendTo .filename)
       {"data" .cachedData "owner" "0x0000000000000000000000000000000000000000"} (WriteFile .filename) )
     
