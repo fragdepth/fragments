@@ -197,6 +197,27 @@
   .cid (_Emscripten.Eval)
   "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
 
+(defn load-tmp-fragment []
+  (-> (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) = .files
+         (Take "_") (ExpectString) = .loaded-fragment-immutable)
+      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable)
+         (Take "e") (ExpectString) = .loaded-fragment-mutable)
+      (str base-folder tmp-folder "immutable.tmp.edn")
+      (FS.Write .loaded-fragment-immutable :Overwrite true)
+      (str base-folder tmp-folder "mutable.tmp.edn")
+      (FS.Write .loaded-fragment-mutable :Overwrite true)
+      .files (ForEach
+              (->
+               = .file
+               (Take 0) (ExpectString) >= .file-name
+               .file-name (WhenNot
+                           (Is "_")
+                           (Maybe (->
+                                   .file (Take 1) (ExpectBytes) = .file-data
+                                   .b58-template-hash (AppendTo .file-name)
+                                   .file-name (Hash.Keccak-256) (ToBase58)
+                                   (FS.Write .file-data))))))))
+
 (def Main
   (Chain
    "Main" :Looped :LStack ; notice large stack size
@@ -207,23 +228,13 @@
       ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
       (__frag-load-cached (get _args :fragment))
       (Take "data")
-      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "_") (ExpectString) = .loaded-fragment-immutable)
-      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
-      (str base-folder tmp-folder "immutable.tmp.edn")
-      (FS.Write .loaded-fragment-immutable :Overwrite true)
-      (str base-folder tmp-folder "mutable.tmp.edn")
-      (FS.Write .loaded-fragment-mutable :Overwrite true)))
+      (load-tmp-fragment)))
 
    (if (and (contains? _args :entity) (contains? _args :entity-id))
      (Setup
       ; KISS: Load the fragment from the ethereum network and write it into a file to load via ChainLoader
       (__entity-load-cached (get _args :entity) (get _args :entity-id))
-      (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "_") (ExpectString) = .loaded-fragment-immutable)
-      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable) (Take "e") (ExpectString) = .loaded-fragment-mutable)
-      (str base-folder tmp-folder "immutable.tmp.edn")
-      (FS.Write .loaded-fragment-immutable :Overwrite true)
-      (str base-folder tmp-folder "mutable.tmp.edn")
-      (FS.Write .loaded-fragment-mutable :Overwrite true)))
+      (load-tmp-fragment)))
 
    ; our main routine, manage a bgfx window and a chain loader
    (println (str "Width " (get _parameters :windowWidth) " Height " (get _parameters :windowHeight)))
@@ -321,7 +332,7 @@
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")
              (get _parameters :windowHeight) (Set .environment "h")
-             (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e") 
+             (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e")
              ; compress and write
              .fs (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment

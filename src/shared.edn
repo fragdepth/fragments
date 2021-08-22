@@ -89,6 +89,7 @@
 ; utility function to load from chain or cache fragments
 (defn __frag-load-cached [hash]
   (->
+   hash = .b58-template-hash ; used in a shared path with entity loading
    ; TODO, check isReferencedBy
    (Maybe
     (->
