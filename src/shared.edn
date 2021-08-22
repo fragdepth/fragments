@@ -145,8 +145,9 @@
          ; and so use file-name + fragment hash
          (Maybe (-> (FS.Read :Bytes bytes))
                 (-> hash (AppendTo .file-name)
-                    .file-name (Hash.Keccak-256) (ToBase58)
-                    (FS.Read :Bytes bytes))
+                    .file-name (Hash.Keccak-256) (ToBase58) > .file-name
+                    "cache/fs/" (PrependTo .file-name)
+                    .file-name (FS.Read :Bytes bytes))
                 :Silent true)))
 
 (def load-string-chain (load-file-chain "" false))
@@ -159,11 +160,11 @@
          (Take "_") (ExpectString) = .loaded-fragment-immutable >> .fragment-result)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable)
          (Take "e") (ExpectString) = .loaded-fragment-mutable >> .fragment-result)
-      (if write-files (do
-                        (str base-folder tmp-folder "immutable.tmp.edn")
-                        (FS.Write .loaded-fragment-immutable :Overwrite true)
-                        (str base-folder tmp-folder "mutable.tmp.edn")
-                        (FS.Write .loaded-fragment-mutable :Overwrite true)))
+      (if write-files (->
+                       (str base-folder tmp-folder "immutable.tmp.edn")
+                       (FS.Write .loaded-fragment-immutable :Overwrite true)
+                       (str base-folder tmp-folder "mutable.tmp.edn")
+                       (FS.Write .loaded-fragment-mutable :Overwrite true)))
       .files (ForEach
               (->
                = .file
@@ -173,8 +174,9 @@
                            (Maybe (->
                                    .file (Take 1) (ExpectBytes) = .file-data
                                    .b58-template-hash (AppendTo .file-name)
-                                   .file-name (Hash.Keccak-256) (ToBase58)
-                                   (FS.Write .file-data))))))
+                                   .file-name (Hash.Keccak-256) (ToBase58) > .file-name
+                                   "cache/fs/" (PrependTo .file-name)
+                                   .file-name (FS.Write .file-data))))))
       .fragment-result))
 
 (defn frag [hash & args]
