@@ -154,6 +154,29 @@
 (def load-bytes-chain (load-file-chain "" true))
 (defn load-bytes [file-name] (run-chain load-bytes-chain file-name))
 
+(defn load-fragment [write-files]
+  (-> (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) = .files
+         (Take "_") (ExpectString) = .loaded-fragment-immutable >> .fragment-result)
+      (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable)
+         (Take "e") (ExpectString) = .loaded-fragment-mutable >> .fragment-result)
+      (if write-files (do
+                        (str base-folder tmp-folder "immutable.tmp.edn")
+                        (FS.Write .loaded-fragment-immutable :Overwrite true)
+                        (str base-folder tmp-folder "mutable.tmp.edn")
+                        (FS.Write .loaded-fragment-mutable :Overwrite true)))
+      .files (ForEach
+              (->
+               = .file
+               (Take 0) (ExpectString) >= .file-name
+               .file-name (WhenNot
+                           (Is "_")
+                           (Maybe (->
+                                   .file (Take 1) (ExpectBytes) = .file-data
+                                   .b58-template-hash (AppendTo .file-name)
+                                   .file-name (Hash.Keccak-256) (ToBase58)
+                                   (FS.Write .file-data))))))
+      .fragment-result))
+
 (defn frag [hash & args]
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
@@ -165,11 +188,7 @@
                                 (__frag-load-cached hash)
                                 (Log "Fragment loaded")
                                 (Take "data")
-                                (| (Take 0) (Brotli.Decompress) (FromBytes)
-                                   (ExpectTable) (Take "_") (ExpectString) >> .fragment-result)
-                                (| (Take 1) (Brotli.Decompress) (FromBytes)
-                                   (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
-                                .fragment-result)
+                                (load-fragment false))
         code (run-chain downloader-chain "")
         ast (read-var code)
         ; can be either String or Bytes (if bytes it's a binary asset)
