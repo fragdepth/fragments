@@ -126,24 +126,51 @@
      .frag-result (WriteFile (str base-folder "cache/frag/" hash) :Flush true))
     :Silent true)))
 
+(defn loop-chain [chain]
+  (if (tick chain) (loop-chain chain) nil))
+
+(defn run-chain [chain input]
+  (do
+    (prepare chain)
+    (start chain (String input))
+    (loop-chain chain)
+    ; stop returns the output
+    (stop chain)))
+
+(defn load-file-chain [hash bytes]
+  (Chain (if bytes "load-bytes" "load-string")
+         (ExpectString) >= .file-name (Log "LOADING")
+         ; try load regular file path
+         ; if fails assume we are loading from chain
+         ; and so use file-name + fragment hash
+         (Maybe (-> (FS.Read :Bytes bytes))
+                (-> hash (AppendTo .file-name)
+                    .file-name (Hash.Keccak-256) (ToBase58)
+                    (FS.Read :Bytes bytes))
+                :Silent true)))
+
+(def load-string-chain (load-file-chain "" false))
+(defn load-string [file-name] (run-chain load-string-chain file-name))
+(def load-bytes-chain (load-file-chain "" true))
+(defn load-bytes [file-name] (run-chain load-bytes-chain file-name))
+
 (defn frag [hash & args]
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
-        node (Node)
-        chain (Chain "downloader"
-                     (__frag-load-cached hash)
-                     (Log "Fragment loaded")
-                     (Take "data")
-                     (| (Take 0) (Brotli.Decompress) (FromBytes) 
-                        (ExpectTable) (Take "_") (ExpectString) >> .fragment-result)
-                     (| (Take 1) (Brotli.Decompress) (FromBytes) 
-                        (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
-                     .fragment-result)
-        code (do
-               (schedule node chain)
-               (run node 0.1)
-               ; stop returns the text code
-               (stop chain))
+        load-string-chain (load-file-chain hash false)
+        load-string (fn* [file-name] (run-chain load-string-chain file-name))
+        load-bytes-chain (load-file-chain hash true)
+        load-bytes (fn* [file-name] (run-chain load-bytes-chain file-name))
+        downloader-chain (Chain "downloader"
+                                (__frag-load-cached hash)
+                                (Log "Fragment loaded")
+                                (Take "data")
+                                (| (Take 0) (Brotli.Decompress) (FromBytes)
+                                   (ExpectTable) (Take "_") (ExpectString) >> .fragment-result)
+                                (| (Take 1) (Brotli.Decompress) (FromBytes)
+                                   (ExpectTable) (Take "e") (ExpectString) >> .fragment-result)
+                                .fragment-result)
+        code (run-chain downloader-chain "")
         ast (read-var code)
         ; can be either String or Bytes (if bytes it's a binary asset)
         immutable (if (string? (first ast)) (str "(-> " (first ast) ")") (first ast))
