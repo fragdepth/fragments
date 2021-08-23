@@ -22,16 +22,16 @@
     (def _Emscripten.EvalAsync Pass)))
 
 (def tmp-folder "tmp/")
-(def base-folder "")
+(def base-folder "user/")
 
 (def ipfs-gateway "https://cloudflare-ipfs.com")
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
 (def fragments "0x7777014b5b09d56299cb0c4b2e23abd61e8a8a65")
 
-(def frag-abi (slurp (str base-folder "FragmentTemplate.json")))
-(def entity-abi (slurp (str base-folder "FragmentEntity.json")))
+(def frag-abi (slurp (str "FragmentTemplate.json")))
+(def entity-abi (slurp (str "FragmentEntity.json")))
 
-(load-file (str base-folder "shared.edn"))
+(load-file (str "shared.edn"))
 
 (defn _decode-base64 []
   (-> (Replace ["-" "_"] ["+" "/"]) >= .b64
@@ -75,7 +75,7 @@
 (def upload-webm-to-ipfs (_upload-to-ipfs "video/webm" "webm"))
 
 (defloop upload-screenshot
-  (str base-folder tmp-folder "screenshot.png")
+  (str tmp-folder "screenshot.png")
   (When (FS.IsFile)
         (->
          (| (Pause 2.0) ; ensure file is ready
@@ -88,7 +88,7 @@
          (Stop))))
 
 (defloop upload-video
-  (str base-folder tmp-folder "recorded-canvas-video.webm")
+  (str tmp-folder "recorded-canvas-video.webm")
   (When (FS.IsFile)
         (->
          (| (Pause 2.0) ; ensure file is ready
@@ -176,7 +176,7 @@
   "globalThis.chainblocks.screenShotPromise" (_Emscripten.EvalAsync)
   ; ok we got something, let's do our job
   "globalThis.chainblocks.setCanUpload(false)" (_Emscripten.Eval)
-  (str base-folder tmp-folder "screenshot.png") (GFX.Screenshot)
+  (str tmp-folder "screenshot.png") (GFX.Screenshot)
   (Msg "screenshot requested")
   (Detach upload-screenshot)
   (Wait upload-screenshot) >= .cid
@@ -240,7 +240,7 @@
        (Chain*
         ; if ethereum fragment is loaded use that
         (if (or (contains? _args :fragment) (and (contains? _args :entity) (contains? _args :entity-id)))
-          (str base-folder tmp-folder "immutable.tmp.edn")
+          (str tmp-folder "immutable.tmp.edn")
           (str base-folder (get _parameters :immutable)))
 
         ; bootstrap code to inject into the environment
@@ -255,8 +255,8 @@
            (def frag-abi ~frag-abi)
            (def entity-abi ~entity-abi)
            (def fragments ~fragments)
-           (load-file (str base-folder "shared.edn"))
-           (load-file (str base-folder "utility.edn"))))
+           (load-file (str "shared.edn"))
+           (load-file (str "utility.edn"))))
        :OnReload
        ; compress source to url format
        (->
@@ -311,7 +311,7 @@
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")
              (get _parameters :windowHeight) (Set .environment "h")
-             (slurp (get _parameters :mutable)) (EDN.Uglify) (Set .environment "e")
+             (slurp (str base-folder (get _parameters :mutable))) (EDN.Uglify) (Set .environment "e")
              ; compress and write
              .fs (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
@@ -319,9 +319,9 @@
              (get _parameters :owner) (Set .frag-data "owner")
              (Sub (->
                    (Await (->
-                           (str base-folder tmp-folder "live-chain-binary")
+                           (str tmp-folder "live-chain-binary")
                            (FS.Write .compressed-bytes :Overwrite true)
-                           (str base-folder tmp-folder "live-chain-env-binary")
+                           (str tmp-folder "live-chain-env-binary")
                            (FS.Write .compressed-env :Overwrite true)
                            .compressed-bytes
                            (Hash.Keccak-256)
@@ -329,10 +329,10 @@
                            (ToHex) (Slice :From 26) >= .eth-id
                            "0x" (PrependTo .eth-id)
                            .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
-                           (str base-folder tmp-folder "live-chain-eth-id")
+                           (str tmp-folder "live-chain-eth-id")
                            (FS.Write .b58-eth-id :Overwrite true)
                             ; also cache locally in order to load it from other files!
-                           (str base-folder "cache/frag/") >= .cached-name
+                           (str "cache/frag/") >= .cached-name
                            .b58-eth-id (AppendTo .cached-name)
                            .frag-data (WriteFile .cached-name :Flush true)))
                   ;;  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)

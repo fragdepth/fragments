@@ -147,23 +147,6 @@ async function reloadCBL() {
       module.FS.createPreloadedFile("/", "FragmentTemplate.json", "FragmentTemplate.json", true, false);
       module.FS.createPreloadedFile("/", "utility.edn", "utility.edn", true, false);
       module.FS.createPreloadedFile("/", "shared.edn", "shared.edn", true, false);
-      module.FS.createPreloadedFile("/", "mutable.edn", "mutable.edn", true, false);
-      module.FS.createPreloadedFile("/", "immutable.edn", "immutable.edn", true, false);
-
-      // // preload files
-      // module.FS.mkdir("/preload");
-      // module.FS.writeFile("/preload/entry.edn", templateCode);
-      // // shaders library
-      // module.FS.mkdir("/preload/shaders/");
-      // module.FS.mkdir("/preload/shaders/lib");
-      // module.FS.mkdir("/preload/shaders/lib/gltf");
-      // // these are needed in this module as well, as we compose the shader
-      // module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "ps_entry.h", "shaders/lib/gltf/ps_entry.h", true, false);
-      // module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "vs_entry.h", "shaders/lib/gltf/vs_entry.h", true, false);
-      // module.FS.createPreloadedFile("/preload/shaders/lib/gltf/", "varying.txt", "shaders/lib/gltf/varying.txt", true, false);
-      // module.FS.mkdir("/preload/shaders/cache");
-      // module.FS.mount(module.IDBFS, {}, "/preload/shaders/cache");
-      // module.FS.mkdir("/preload/shaders/tmp");
 
       // mount persistent storage
       module.FS.mkdir("/storage");

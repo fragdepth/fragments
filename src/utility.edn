@@ -1,10 +1,10 @@
-; this is injected in the fragment environment
+; this whole script is injected inside the hot-reload scripting environment
 
 ; read and eval environment
 (try*
  (eval (read-string (str "(do " (slurp (if (or (contains? _args :fragment) (and (contains? _args :entity) (contains? _args :entity-id)))
-                                         (str base-folder tmp-folder "mutable.tmp.edn")
-                                         (get _parameters :mutable))) "nil)")))
+                                         (str tmp-folder "mutable.tmp.edn")
+                                         (str base-folder (get _parameters :mutable)))) "nil)")))
  (catch* err (prn (str "Failed to load environment with error: " err))))
 
 ; setup some constants - run afer env to overwrite and force them in
@@ -107,7 +107,7 @@
 (defn __ipfs-load-cached [hash full]
   (->
    (Maybe (->
-           (ReadFile (str base-folder "cache/ipfs/" hash (if full "F" "B")))
+           (ReadFile (str "cache/ipfs/" hash (if full "F" "B")))
            (if full 
              (ExpectLike __downloader-chain-template :Unsafe true)
              (ExpectBytes)))
@@ -117,13 +117,13 @@
                          :Bytes true
                          :FullResponse full
                          :Timeout 60)
-           (WriteFile (str base-folder "cache/ipfs/" hash (if full "F" "B")) :Flush true))
+           (WriteFile (str "cache/ipfs/" hash (if full "F" "B")) :Flush true))
           :Silent true)))
 
 (defn __ar-load-cached [tx full]
   (->
    (Maybe (->
-           (ReadFile (str base-folder "cache/ar/" tx (if full "F" "B")))
+           (ReadFile (str "cache/ar/" tx (if full "F" "B")))
            (if full
              (ExpectLike __downloader-chain-template :Unsafe true)
              (ExpectBytes)))
@@ -133,7 +133,7 @@
                          :Bytes true
                          :FullResponse full
                          :Timeout 60)
-           (WriteFile (str base-folder "cache/ar/" tx (if full "F" "B")) :Flush true))
+           (WriteFile (str "cache/ar/" tx (if full "F" "B")) :Flush true))
           :Silent true)))
 
 (defmacro! ar (fn* [tx] ['__ar-load-cached tx]))
@@ -185,7 +185,7 @@
         loader (Chain (str name "-loader")
                       (dl-func hash false) = .model-data
                       (verify-bytes-hash "Model" kkhash)
-                      (str base-folder tmp-folder ".gltf-model.glb") 
+                      (str tmp-folder ".gltf-model.glb") 
                       (FS.Write .model-data :Overwrite true)
                       (GLTF.Load))]
                ; replace with detach and wait when we can share context

@@ -8,5 +8,5 @@
 
 ## How?
 
-Edit `immutable.edn` mainly, that script is hot-reloaded so every time you save it will reload.
+Edit `src/user/immutable.edn` mainly, that script is hot-reloaded so every time you save it will reload.
 

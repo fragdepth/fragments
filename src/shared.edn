@@ -94,7 +94,7 @@
    (Maybe
     (->
      ; TODO, decide how to flag cached content for update after a mutation happened
-     (ReadFile (str base-folder "cache/frag/" hash))
+     (ReadFile (str "cache/frag/" hash))
      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
     (-> ; download worst case scenario
      hash (Log "Downloading")
@@ -123,7 +123,7 @@
      .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
      (__eth-call fragments .callData)
      (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
-     .frag-result (WriteFile (str base-folder "cache/frag/" hash) :Flush true))
+     .frag-result (WriteFile (str "cache/frag/" hash) :Flush true))
     :Silent true)))
 
 (defn loop-chain [chain]
@@ -143,7 +143,9 @@
          ; try load regular file path
          ; if fails assume we are loading from chain
          ; and so use file-name + fragment hash
-         (Maybe (-> (FS.Read :Bytes bytes))
+         (Maybe (->
+                 base-folder (PrependTo .file-name)
+                 .file-name (FS.Read :Bytes bytes))
                 (-> hash (AppendTo .file-name)
                     .file-name (Hash.Keccak-256) (ToBase58) > .file-name
                     "cache/fs/" (PrependTo .file-name)
@@ -161,9 +163,9 @@
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable)
          (Take "e") (ExpectString) = .loaded-fragment-mutable >> .fragment-result)
       (if write-files (->
-                       (str base-folder tmp-folder "immutable.tmp.edn")
+                       (str tmp-folder "immutable.tmp.edn")
                        (FS.Write .loaded-fragment-immutable :Overwrite true)
-                       (str base-folder tmp-folder "mutable.tmp.edn")
+                       (str tmp-folder "mutable.tmp.edn")
                        (FS.Write .loaded-fragment-mutable :Overwrite true)))
       .files (ForEach
               (->
@@ -204,7 +206,7 @@
   (->
    (Maybe
     (->
-     (ReadFile (str base-folder "cache/entity/" contract "-" id))
+     (ReadFile (str "cache/entity/" contract "-" id))
      (ExpectBytesSeq)
      ;; (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true)
      )
@@ -241,5 +243,5 @@
       "frag-hash" .env-hash
       "expected-to" contract} (Do fetch-block-data-entity) (Take 0) = .entity-data
      [1 .entity-data] (Assoc .first-result)
-     .first-result (WriteFile (str base-folder "cache/entity/" contract "-" id) :Flush true))
+     .first-result (WriteFile (str "cache/entity/" contract "-" id) :Flush true))
     :Silent true)))
