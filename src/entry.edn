@@ -5,6 +5,7 @@
 (def _args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
 
 (def _parameters {:user (if (contains? _args :user) (get _args :user) "0x0000000000000000000000000000000000000000")
+                  :rootFolder (if (contains? _args :rootFolder) (get _args :rootFolder) "")
                   :immutable (if (contains? _args :immutable) (get _args :immutable) "immutable.edn")
                   :mutable (if (contains? _args :mutable) (get _args :mutable) "mutable.edn")
                   :windowTitle (if (contains? _args :windowTitle) (get _args :windowTitle) "Fragment")
@@ -22,7 +23,7 @@
     (def _Emscripten.EvalAsync Pass)))
 
 (def tmp-folder "tmp/")
-(def base-folder "user/")
+(def base-folder (str "user/" (get _parameters :rootFolder)))
 
 (def ipfs-gateway "https://cloudflare-ipfs.com")
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
@@ -305,7 +306,23 @@
                   .sres)
                  (->
                   .sparams)
-                 :Silent true))]) (Set .fs "_") ; main script = _
+                 :Silent true))
+               "load-string"
+               (->
+                (| (Take 0) (ExpectString) >> .lsres) ; load-string
+                (| (Take 1) (ExpectString) = .ls-file-name >= .ls-file-name-full >> .lsres) ; file-name
+                .ls-file-name (Log "String file to store")
+                base-folder (PrependTo .ls-file-name-full)
+                .ls-file-name-full (FS.Read :Bytes false) (Set .fs .ls-file-name)
+                .lsres)
+               "load-bytes"
+               (->
+                (| (Take 0) (ExpectString) >> .lbres) ; load-string
+                (| (Take 1) (ExpectString) = .lb-file-name >= .lb-file-name-full >> .lbres) ; file-name
+                .lb-file-name (Log "String file to store")
+                base-folder (PrependTo .lb-file-name-full)
+                .lb-file-name-full (FS.Read :Bytes true) (Set .fs .lb-file-name)
+                .lbres)]) (Set .fs "_") ; main script = _
              ; enviruments are not hashed here, so we can add structured data
              ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
              (get _parameters :windowTitle) (Set .environment "t")

@@ -153,7 +153,7 @@
                 :Silent true)))
 
 (def load-string-chain (load-file-chain "" false))
-(defn load-string [file-name] (run-chain load-string-chain file-name))
+(defn load-string [file-name] (read-var (run-chain load-string-chain file-name)))
 (def load-bytes-chain (load-file-chain "" true))
 (defn load-bytes [file-name] (run-chain load-bytes-chain file-name))
 
@@ -185,7 +185,7 @@
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
         load-string-chain (load-file-chain hash false)
-        load-string (fn* [file-name] (run-chain load-string-chain file-name))
+        load-string (fn* [file-name] (read-var (run-chain load-string-chain file-name)))
         load-bytes-chain (load-file-chain hash true)
         load-bytes (fn* [file-name] (run-chain load-bytes-chain file-name))
         downloader-chain (Chain "downloader"

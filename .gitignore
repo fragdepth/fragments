@@ -16,3 +16,4 @@ src/cbl-mt.worker.js
 src/cbl-st.js
 src/cbl-st.wasm
 src/user
+.DS_Store
