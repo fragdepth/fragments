@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 500.16 500.16">
+
+<defs><clipPath id="clip-path"><rect id="ImgClipMask" width="500" height="500" rx="42.19" style="fill:none"/></clipPath><linearGradient id="linear-gradient" x1="3.54" y1="356.12" x2="482.79" y2="484.54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1a1a1a" stop-opacity="0.3"/><stop offset="0.07" stop-color="#171717" stop-opacity="0.33"/><stop offset="1" stop-opacity="0.6"/></linearGradient><linearGradient id="linear-gradient-2" x1="10" y1="344.5" x2="490" y2="344.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1a1a1a" stop-opacity="0.5"/><stop offset="0.34" stop-color="#0e0e0e" stop-opacity="0.64"/><stop offset="1" stop-opacity="0.8"/></linearGradient></defs><g id="Layer_2" data-name="Layer 2"><g id="Layer_1-2" data-name="Layer 1"><g id="Background"><rect width="500" height="500" rx="42.19" style="fill:#2c344c"/></g></g></g>
+
+<g style="clip-path:url(#clip-path)"><image width="2084" height="2084" transform="scale(0.24)" xlink:href="data:image/png;base64,{{b64-png-image}}"/></g>
+<g id="Border" style="opacity:0.75"><path d="M452.68,10A37.32,37.32,0,0,1,490,47.32V452.68A37.32,37.32,0,0,1,452.68,490H47.32A37.32,37.32,0,0,1,10,452.68V47.32A37.32,37.32,0,0,1,47.32,10H452.68m0-2H47.32A39.37,39.37,0,0,0,8,47.32V452.68A39.37,39.37,0,0,0,47.32,492H452.68A39.37,39.37,0,0,0,492,452.68V47.32A39.37,39.37,0,0,0,452.68,8Z"/></g>
+<g id="TextBg"><path d="M490,363v89.68A37.32,37.32,0,0,1,452.68,490H47.32A37.32,37.32,0,0,1,10,452.68V332Z" style="fill:url(#linear-gradient)"/></g>
+<g id="LineSeparator"><polygon points="490 357 490 363 10 332 10 326 490 357" style="fill:url(#linear-gradient-2)"/></g>
+
+<text transform="translate(29.81 383.45)" style="font-size:24px;fill:#fff;font-family:Verdana">{{name}}</text>
+
+<text transform="translate(31.08 403.58)" style="font-size:12px;fill:#fff;font-family:Verdana-Italic, Verdana;font-style:italic">By {{creator}}</text>
+
+
+<defs>
+  <!-- define lines for text lies on -->
+  <path id="path1" d="M30,397 H414 M30,418 H414"></path>
+ </defs>
+ <use xlink:href="#path1" x="00" y="35" stroke="green" stroke-width="0" opacity="0%" />
+ <text transform="translate(00,35)" fill="white" font-size="18" font-family="Verdana">
+  <textPath xlink:href="#path1">{{desc}}</textPath>
+ </text>
+
+<text transform="translate(100.00 480.58)" style="font-size:14px;fill:#fff;font-family:Verdana-Italic, Verdana;font-style:italic">Fragment {{fid}}</text>
+
+<g id="fragLogo2" style="opacity:0.5"><polygon points="470.49 383.46 446.52 404.38 445.76 424.16 470.49 383.46" style="fill:#fff"/><polygon points="437.77 410.09 445.38 403.62 445 407.81 437.77 410.09" style="fill:#fff"/><polygon points="446.14 425.31 452.99 415.04 455.65 421.5 446.14 425.31" style="fill:#fff"/><polygon points="427.88 419.6 442.34 425.31 436.63 427.21 427.88 419.6" style="fill:#fff"/><polygon points="429.02 418.84 445 425.31 445 408.57 437.39 411.61 429.02 418.84" style="fill:#fff"/><polygon points="437.39 428.35 440.06 431.01 442.72 426.83 437.39 428.35" style="fill:#fff"/><polygon points="442.34 429.87 444.62 431.77 446.9 429.49 444.62 426.45 442.34 429.87" style="fill:#fff"/><polygon points="446.14 426.07 448.04 428.73 455.27 422.64 446.14 426.07" style="fill:#fff"/><polygon points="475.43 406.29 445 432.53 470.49 454.6 460.22 431.77 475.43 406.29" style="fill:#fff"/></g>
+
+</svg>

@@ -1,5 +1,5 @@
 ; parameters
-(def template-hash (slurp "src/live-chain-eth-id"))
+(def template-hash (slurp "../src/live-chain-eth-id"))
 (def token-name "My Rez Fragment n.1")
 (def token-symbol "REZ1")
 (def unique true)
@@ -13,8 +13,8 @@
 ; Vault: 0x850f8c7f943Ad06ABe06a97015f8935bB3925125
 
 ; contracts abis
-(def template-abi (slurp "src/FragmentTemplate.json"))
-(def entity-abi (slurp "src/FragmentEntity.json"))
+(def template-abi (slurp "../src/FragmentTemplate.json"))
+(def entity-abi (slurp "../src/FragmentEntity.json"))
 
 (defchain minter
   template-hash (FromBase58) = .templateHash

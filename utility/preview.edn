@@ -1,0 +1,26 @@
+; customize those values under
+
+(def name "My Template")
+(def creator "fragcolor.com")
+(def description "A template for a new fragment")
+(def fid "2RnwVJWcUudQAscTVwY4EN7o8gfq")
+(def image "test.png")
+
+; No changes from now on!
+
+(def svg-base (slurp "TemplateCard.svg"))
+
+(defchain make-svg
+  image (FS.Read :Bytes true) (ToBase64) = .b64-png-image
+  svg-base
+  (Regex.Replace #"\{\{name\}\}" name)
+  (Regex.Replace #"\{\{creator\}\}" creator)
+  (Regex.Replace #"\{\{desc\}\}" description)
+  (Regex.Replace #"\{\{fid\}\}" fid)
+  (Regex.Replace #"\{\{b64-png-image\}\}" .b64-png-image)
+  = .svg-final
+  "preview.svg" (FS.Write .svg-final))
+
+(defnode main)
+(schedule main make-svg)
+(run main)

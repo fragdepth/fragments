@@ -7,8 +7,8 @@
 (def entity-amount 1)
 
 ; contracts abis
-(def template-abi (slurp "src/FragmentTemplate.json"))
-(def entity-abi (slurp "src/FragmentEntity.json"))
+(def template-abi (slurp "../src/FragmentTemplate.json"))
+(def entity-abi (slurp "../src/FragmentEntity.json"))
 
 ; file minting environment
 (def file-env {"e" "" ; environment 
@@ -21,8 +21,8 @@
   (do
     ; code/script, use working directory artifacts
     (defchain template-minter
-      "src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
-      "src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
+      "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
       ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
       [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
@@ -31,7 +31,7 @@
       (ToHex) (Log "Call Input"))
 
     (defchain entity-minter
-      "src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
       entity-amount (BigInt) (BigInt.ToBytes) = .entityAmount
       [.mutableData .entityAmount]
       (Eth.EncodeCall entity-abi "upload")
@@ -55,7 +55,7 @@
       (Eth.EncodeCall template-abi "upload")
       (Log)
       (ToHex) (Log "Call Input")
-      "src/cache/frag/" >= .filename
+      "../src/cache/frag/" >= .filename
       .frag-hash (AppendTo .filename)
       {"data" .cachedData "owner" "0x0000000000000000000000000000000000000000"} (WriteFile .filename) )
     

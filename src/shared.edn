@@ -159,7 +159,7 @@
 
 (defn load-fragment [write-files]
   (-> (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) = .files
-         (Take "_") (ExpectString) = .loaded-fragment-immutable >> .fragment-result)
+         (Take ".s") (ExpectString) = .loaded-fragment-immutable >> .fragment-result)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable)
          (Take "e") (ExpectString) = .loaded-fragment-mutable >> .fragment-result)
       (if write-files (->
@@ -172,7 +172,7 @@
                = .file
                (Take 0) (ExpectString) >= .file-name
                .file-name (WhenNot
-                           (Is "_")
+                           (Any [".s" ".v"]) ; avoid main script and version
                            (Maybe (->
                                    .file (Take 1) (ExpectBytes) = .file-data
                                    .b58-template-hash (AppendTo .file-name)
