@@ -3,6 +3,7 @@
 (def token-name "My Rez Fragment n.1")
 (def token-symbol "REZ1")
 (def unique true)
+(def can-update false)
 (def uint96-max "0xffffffffffffffffffffffffffffffffffffffff") ; mint tokens forever
 (def _10_000 "0x2710") ; mint 10k tokens
 (def max-supply _10_000)
@@ -19,7 +20,7 @@
 (defchain minter
   template-hash (FromBase58) = .templateHash
   max-supply (BigInt) (BigInt.ToBytes) = .maxSupply
-  [.templateHash token-name token-symbol unique .maxSupply]
+  [.templateHash token-name token-symbol unique can-update .maxSupply]
   (Eth.EncodeCall template-abi "rez")
   (ToHex) (Log "Call Input"))
 

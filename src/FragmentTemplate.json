@@ -724,6 +724,33 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getIpfsRuntime",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "cid",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "cid",
+        "type": "bytes32"
+      }
+    ],
+    "name": "setIpfsRuntime",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -732,6 +759,20 @@
       }
     ],
     "name": "tokenURI",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "contractURI",
     "outputs": [
       {
         "internalType": "string",
@@ -781,7 +822,7 @@
         "type": "address"
       }
     ],
-    "name": "addWhitelist",
+    "name": "whitelistRemove",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -799,7 +840,7 @@
         "type": "address"
       }
     ],
-    "name": "removeWhitelist",
+    "name": "whitelistAdd",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -863,11 +904,6 @@
         "internalType": "uint64",
         "name": "mutableData",
         "type": "uint64"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "ipfsRuntime",
-        "type": "bytes32"
       }
     ],
     "stateMutability": "view",
@@ -1043,11 +1079,6 @@
         "type": "bytes"
       },
       {
-        "internalType": "bytes32",
-        "name": "ipfsRuntime",
-        "type": "bytes32"
-      },
-      {
         "internalType": "uint160[]",
         "name": "references",
         "type": "uint160[]"
@@ -1086,11 +1117,6 @@
         "type": "bytes"
       },
       {
-        "internalType": "bytes32",
-        "name": "ipfsRuntime",
-        "type": "bytes32"
-      },
-      {
         "internalType": "uint256",
         "name": "includeCost",
         "type": "uint256"
@@ -1121,6 +1147,11 @@
       {
         "internalType": "bool",
         "name": "unique",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "updateable",
         "type": "bool"
       },
       {

@@ -1,7 +1,6 @@
 (def _args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
 
 ; parameters
-(def ipfs-runtime "QmSjdpXYK97ULFuryb7eoxCCVUHFQpH4pxUcXbxswiyqwb")
 (def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 (def include-cost uint256-max) ; uint256 max - don't allow inclusion
 (def entity-amount 1)
@@ -23,9 +22,8 @@
     (defchain template-minter
       "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
       "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
-      ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
-      [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
+      [.immutableData .mutableData [] [] [] .includeCost]
       (Eth.EncodeCall template-abi "upload")
       (Log)
       (ToHex) (Log "Call Input"))
@@ -49,9 +47,8 @@
       (Hash.Keccak-256) (Slice :From 12) (ToBase58) (Log "hash") = .frag-hash
       ; we still use artifact env
       file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
-      ipfs-runtime (FromBase58) (Slice :From 2) = .ipfsRuntime ; remove multihash prefix
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
-      [.immutableData .mutableData .ipfsRuntime [] [] [] .includeCost]
+      [.immutableData .mutableData [] [] [] .includeCost]
       (Eth.EncodeCall template-abi "upload")
       (Log)
       (ToHex) (Log "Call Input")

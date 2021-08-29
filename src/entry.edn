@@ -333,7 +333,7 @@
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")
              (get _parameters :windowHeight) (Set .environment "h")
-             ; TODO VERSION
+             ; TODO PREVIEW IMAGE (goes into the svg) (ipfs cid only of a png)
              ; TODO DESCRIPTION (goes into the svg)
              (slurp (str base-folder (get _parameters :mutable))) (EDN.Uglify) (Set .environment "e")
              ; compress and write
