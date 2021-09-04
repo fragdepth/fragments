@@ -1084,16 +1084,6 @@
         "type": "uint160[]"
       },
       {
-        "internalType": "bytes32[]",
-        "name": "storageCids",
-        "type": "bytes32[]"
-      },
-      {
-        "internalType": "uint64[]",
-        "name": "storageSizes",
-        "type": "uint64[]"
-      },
-      {
         "internalType": "uint256",
         "name": "includeCost",
         "type": "uint256"
