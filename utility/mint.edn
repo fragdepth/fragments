@@ -23,7 +23,7 @@
       "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
       "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
-      [.immutableData .mutableData [] [] [] .includeCost]
+      [.immutableData .mutableData [] .includeCost]
       (Eth.EncodeCall template-abi "upload")
       (Log)
       (ToHex) (Log "Call Input"))
@@ -48,7 +48,7 @@
       ; we still use artifact env
       file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
-      [.immutableData .mutableData [] [] [] .includeCost]
+      [.immutableData .mutableData [] .includeCost]
       (Eth.EncodeCall template-abi "upload")
       (Log)
       (ToHex) (Log "Call Input")
