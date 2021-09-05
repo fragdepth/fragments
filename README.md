@@ -14,4 +14,3 @@ https://ipfs.io/ipfs/QmSQaee7vrA1F6f6FNNthZkymP7qsHLARZNjP6i2RR4LeT?filename=cbl
 Edit `src/user/immutable.edn` mainly, that script is hot-reloaded so every time you save it will reload.
 
 Add your own folders in `src/user/MyFolder` and load by calling `./cbl  src/entry.edn --rootFolder MyFolder/`
-

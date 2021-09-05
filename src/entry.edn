@@ -250,6 +250,8 @@
 
         ; bootstrap code to inject into the environment
         `(do
+           ; so if we are the main fragment we are aware
+           (def main? true)
            (def _args ~_args)
            (def base-folder ~base-folder)
            (def tmp-folder ~tmp-folder)

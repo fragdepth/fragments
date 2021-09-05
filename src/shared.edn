@@ -184,6 +184,7 @@
 (defn frag [hash & args]
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
+        main? false ; we are not the main fragment, override this
         load-string-chain (load-file-chain hash false)
         load-string (fn* [file-name] (read-var (run-chain load-string-chain file-name)))
         load-bytes-chain (load-file-chain hash true)
