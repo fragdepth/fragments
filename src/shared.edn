@@ -104,7 +104,6 @@
      (Eth.DecodeCall frag-abi "dataOf")
      (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
      (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
-     (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
      ; fetch block with immutable data
      {"block-number" .immutable-block
       "frag-hash" hash
