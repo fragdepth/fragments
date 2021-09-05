@@ -24,12 +24,12 @@ curl https://ipfs.io/ipfs/$IPFS_SHADERS/include/implicit_shapes.h --output src/s
 curl https://ipfs.io/ipfs/$IPFS_SHADERS/include/noise.h --output src/shaders/include/noise.h
 curl https://ipfs.io/ipfs/$IPFS_SHADERS/include/ShaderFastMathLib.h --output src/shaders/include/ShaderFastMathLib.h
 
-curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.wasm --output src/web/cbl-mt.wasm
-curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.js --output src/web/cbl-mt.js
-curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.worker.js --output src/web/cbl-mt.worker.js
+curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.wasm --output src/cbl-mt.wasm
+curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.js --output src/cbl-mt.js
+curl https://ipfs.io/ipfs/$IPFS_CBL_MT/cbl-mt.worker.js --output src/cbl-mt.worker.js
 
-curl https://ipfs.io/ipfs/$IPFS_CBL_ST/cbl-st.wasm --output src/web/cbl-st.wasm
-curl https://ipfs.io/ipfs/$IPFS_CBL_ST/cbl-st.js --output src/web/cbl-st.js
+curl https://ipfs.io/ipfs/$IPFS_CBL_ST/cbl-st.wasm --output src/cbl-st.wasm
+curl https://ipfs.io/ipfs/$IPFS_CBL_ST/cbl-st.js --output src/cbl-st.js
 
 curl https://ipfs.io/ipfs/$IPFS_SHADERC_EM/shaderc.wasm --output src/shaders/shaderc.wasm
 curl https://ipfs.io/ipfs/$IPFS_SHADERC_EM/shaderc.js --output src/shaders/shaderc.js

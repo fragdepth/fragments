@@ -148,34 +148,41 @@ async function reloadCBL() {
       module.FS.createPreloadedFile("/", "utility.edn", "utility.edn", true, false);
       module.FS.createPreloadedFile("/", "shared.edn", "shared.edn", true, false);
 
-      // mount persistent storage
-      module.FS.mkdir("/storage");
-      module.FS.mount(module.IDBFS, {}, "/storage");
+      // TODO Caching properly, emscripten uses indexdb but we had some issue when enabled
 
-      // grab from current storage
-      await new Promise((resolve, reject) => {
-        // true == populate from the DB
-        module.FS.syncfs(true, function (err) {
-          if (err !== null) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
+      // // mount persistent storage
+      // module.FS.mkdir("/storage");
+      // module.FS.mount(module.IDBFS, {}, "/storage");
+      // // module.FS.mkdir("/cache");
+      // // module.FS.mount(module.IDBFS, {}, "/cache");
+      // // module.FS.mkdir("/shaders");
+      // // module.FS.mkdir("/shaders/cache");
+      // // module.FS.mount(module.IDBFS, {}, "/shaders/cache");
 
-      // start sync loop to allow persistent storage
-      if (window.chainblocks.syncfs) {
-        clearInterval(window.chainblocks.syncfs);
-      }
+      // // grab from current storage
+      // await new Promise((resolve, reject) => {
+      //   // true == populate from the DB
+      //   module.FS.syncfs(true, function (err) {
+      //     if (err !== null) {
+      //       reject(err);
+      //     } else {
+      //       resolve();
+      //     }
+      //   });
+      // });
 
-      window.chainblocks.syncfs = setInterval(function () {
-        // false == write from mem to the DB
-        module.FS.syncfs(false, function (err) {
-          if (err)
-            throw err;
-        });
-      }, 2000);
+      // // start sync loop to allow persistent storage
+      // if (window.chainblocks.syncfs) {
+      //   clearInterval(window.chainblocks.syncfs);
+      // }
+
+      // window.chainblocks.syncfs = setInterval(function () {
+      //   // false == write from mem to the DB
+      //   module.FS.syncfs(false, function (err) {
+      //     if (err)
+      //       throw err;
+      //   });
+      // }, 2000);
 
       // window.chainblocks.previewScreenShot = function () {
       //   const screenshotBytes = module.FS.readFile("/.hasten/screenshot.png");
