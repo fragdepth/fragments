@@ -55,7 +55,11 @@ async function reloadCBL() {
   }
 
   if (navigator && navigator.xr) {
-    parameters.xrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+    try {
+      parameters.xrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+    } catch (_) {
+      parameters.xrSupported = false;
+    }
   } else {
     parameters.xrSupported = false;
   }
