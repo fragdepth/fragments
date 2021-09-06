@@ -4,6 +4,8 @@
 (def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 (def include-cost uint256-max) ; uint256 max - don't allow inclusion
 (def entity-amount 1)
+(def fragments "0xC0DEFfff8722dE5780805eA90e51E843474AFdfF")
+(def runtime "QmQRRM5c7uQaPMYG3XEWDzVbPawuLc3c4ZoFHm92GAWMk5")
 
 ; contracts abis
 (def template-abi (slurp "../src/FragmentTemplate.json"))
@@ -16,6 +18,11 @@
 
 (defnode main)
 
+(defn metamask-call [dest call]
+  (->
+   (str "await ethereum.request({method: 'eth_sendTransaction', params: [{from: ethereum.selectedAddress, to: \"" dest "\", data: \"") (PrependTo call)
+   "\"}]})" (AppendTo call) call))
+
 (if (empty? *command-line-args*)
   (do
     ; code/script, use working directory artifacts
@@ -25,25 +32,37 @@
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
       [.immutableData .mutableData [] .includeCost]
       (Eth.EncodeCall template-abi "upload")
-      (Log)
-      (ToHex) (Log "Call Input"))
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "upload-template"))
 
     (defchain entity-minter
       "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
       entity-amount (BigInt) (BigInt.ToBytes) = .entityAmount
       [.mutableData .entityAmount]
       (Eth.EncodeCall entity-abi "upload")
-      (ToHex) (Log "Call Input"))
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "upload-entity"))
+
+    (defchain runtime-setter
+      runtime (FromBase58) (Slice :From 2) (Log) = .runtime
+      [.runtime]
+      (Eth.EncodeCall template-abi "setIpfsRuntime")
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "setIpfsRuntime-template"))
 
     (schedule main template-minter)
-    (schedule main entity-minter))
+    (schedule main entity-minter)
+    (schedule main runtime-setter))
   (do
     ; file passed as argument
     (defchain store-file
       (first *command-line-args*) = .file-name (FS.Read :Bytes true) = .file-data
       ; serialize in our format
       .file-data (Set .fs .file-name) ; organize in a table
-      .fs (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData 
+      .fs (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData
       (Hash.Keccak-256) (Slice :From 12) (ToBase58) (Log "hash") = .frag-hash
       ; we still use artifact env
       file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
@@ -54,8 +73,8 @@
       (ToHex) (Log "Call Input")
       "../src/cache/frag/" >= .filename
       .frag-hash (AppendTo .filename)
-      {"data" .cachedData "owner" "0x0000000000000000000000000000000000000000"} (WriteFile .filename) )
-    
+      {"data" .cachedData "owner" "0x0000000000000000000000000000000000000000"} (WriteFile .filename))
+
     (schedule main store-file)))
 
 (run main)

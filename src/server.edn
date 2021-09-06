@@ -8,13 +8,15 @@
 
 (defloop handler ; must be loop!
   (Http.Read) = .request
-  (Take "target")
   ; extremely simple - don't use it in production
-  (Log "target")
-  (Match ["/"
-          (-> "/index.html" (Http.SendFile headers))
-          nil
-          (-> (Http.SendFile headers))]))
+  (Take "target") >= .target
+  
+  (Regex.Search #"(.*)\?") = .matches
+  (Count .matches) (When (Is 2) (-> .matches (Take 1) > .target))
+
+  .target (Log "target")
+  (Match ["/" (-> "/index.html" (Http.SendFile headers))
+          nil (-> .target (Http.SendFile headers))]))
 
 (defloop main
   (Http.Server handler))
