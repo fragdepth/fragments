@@ -4,7 +4,7 @@
 ;; (def headers {"Cross-Origin-Opener-Policy" "same-origin"
 ;;               "Cross-Origin-Embedder-Policy" "require-corp"})
 
-(def headers {})
+(def headers {"X-Frame-Options" ""})
 
 (defnode Root)
 
