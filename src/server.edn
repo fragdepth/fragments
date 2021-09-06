@@ -1,8 +1,10 @@
 ; script self-host web version
 
 ; need those for multi-threading wasm
-(def headers {"Cross-Origin-Opener-Policy" "same-origin"
-              "Cross-Origin-Embedder-Policy" "require-corp"})
+;; (def headers {"Cross-Origin-Opener-Policy" "same-origin"
+;;               "Cross-Origin-Embedder-Policy" "require-corp"})
+
+(def headers {})
 
 (defnode Root)
 
