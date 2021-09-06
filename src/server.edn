@@ -1,19 +1,25 @@
 ; script self-host web version
 
-; need those for multi-threading wasm
-;; (def headers {"Cross-Origin-Opener-Policy" "same-origin"
-;;               "Cross-Origin-Embedder-Policy" "require-corp"})
+(def _args (eval `(assoc {} ~@*command-line-args*)))
 
-(def headers {"X-Frame-Options" ""
-              "Access-Control-Allow-Origin" "*"})
+; need those for multi-threading wasm
+(def headers-self {"Cross-Origin-Opener-Policy" "same-origin"
+                   "Cross-Origin-Embedder-Policy" "require-corp"})
+; need those for OpenSea and in general iframes
+(def headers-embed {"X-Frame-Options" ""
+                    "Access-Control-Allow-Origin" "*"})
+
+(def headers (if (contains? _args "--embed") (if (read-string (get _args "--embed")) headers-embed headers-self) headers-self))
+
+(println headers)
 
 (defnode Root)
 
 (defloop handler ; must be loop!
   (Http.Read) = .request
-  ; extremely simple - don't use it in production
   (Take "target") >= .target
-  
+
+  ; filter out query params
   (Regex.Search #"(.*)\?") = .matches
   (Count .matches) (When (Is 2) (-> .matches (Take 1) > .target))
 
