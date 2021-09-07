@@ -1,0 +1,109 @@
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+
+(def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")
+                  :gatewayURL (if (contains? _args "--gateway") (get _args "--gateway") "https://cloudflare-eth.com")})
+
+(if (not (= platform "emscripten"))
+  (do
+    ; fix some incompatibilities with emscripten
+    (def _Emscripten.Eval Pass)
+    (def _Emscripten.EvalAsync Pass)))
+
+(def tmp-folder "tmp/")
+(def base-folder (str "user/" (get _parameters :rootFolder)))
+
+(def frag-abi (slurp (str "FragmentTemplate.json")))
+(def entity-abi (slurp (str "FragmentEntity.json")))
+
+(load-file (str "shared.edn"))
+
+; need those for multi-threading wasm
+(def headers {"Cross-Origin-Opener-Policy" "same-origin"
+              "Cross-Origin-Embedder-Policy" "require-corp"})
+
+(defnode Root)
+
+(def license-commercial-use "CC BY-SA 4.0")
+(def license-non-commercial-use "CC BY-NC-ND 4.0")
+(def img-server "https://img.fragments.foundation/")
+(def player-server "https://player.fragments.foundation/")
+(def embed-server "https://embed.fragments.foundation/")
+(def uint256-max "115792089237316195423570985008687907853269984665640564039457584007913129639935")
+
+(defloop handler ; must be loop!
+  (Http.Read) = .request
+
+  (Take "target")
+  (Log "target")
+
+  ; template metadata request
+  (| (Regex.Match #"\/\?ch=(\d+)&t=(\w+)&m=(\w+)&i=(\d+)&r=(\w+)") >= .match
+     (Count .match)
+     (When (Is 6)
+           (->
+            (Msg "template")
+
+            .match
+            (| (Take 1) = .chainId)
+            (| (Take 2) = .templateId)
+            (| (Take 3) = .mutableHash)
+            (| (Take 4) = .includeCost)
+            ;; (| (Take 5) = .runtime)
+
+            ; build image url
+            img-server >= .imageUrl
+            ; we cache by hash images on the image server
+            [.templateId .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
+            ; template images are svgs
+            ;; ".svg" (AppendTo .imageUrl)
+
+            ; build both normal and embedded player
+            player-server >= .extUrl
+            embed-server >= .animUrl
+            "embed.html" (AppendTo .animUrl)
+            "?ch=" (AppendTo .extUrl) (AppendTo .animUrl)
+            .chainId (AppendTo .extUrl) (AppendTo .animUrl)
+            "&t=" (AppendTo .extUrl) (AppendTo .animUrl)
+            .templateId (AppendTo .extUrl) (AppendTo .animUrl)
+
+            ; build name
+            "Fragment " >= .name
+            .templateId (AppendTo .name)
+
+            ; include cost attribute
+            .includeCost
+            (If (IsNot uint256-max)
+                (-> {"trait_type" "Stake to include"
+                     "value" .includeCost})
+                (-> {"trait_type" "Stake to include"
+                     "value" "Unavailable"}))  >> .attribs
+
+            ; json response
+            {"name" .name
+             "description" "A Fragment of The Metaverse"
+             "external_url" .extUrl
+             "animation_url" .animUrl
+             "image" .imageUrl
+             "attributes" .attribs}
+            (ToJson) (Http.Response :Headers {"Content-Type" "application/json"})
+
+            ; we are done here
+            (Restart))))
+
+  ; entity metadata request
+  (| (Regex.Match #"\/\?ch=(\d+)&id=(\d+)&e=(\w+)&m=(\w+)&r=(\w+)") >= .match
+     (Count .match)
+     (When (Is 6)
+           (->
+            (Msg "entity")
+            "/fragments-logo.png" (Http.SendFile)
+            (Restart))))
+
+  (Log "Invalid query"))
+
+
+(defloop main
+  (Http.Server handler))
+
+(schedule Root main)
+(run Root 0.1)
