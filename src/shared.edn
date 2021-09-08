@@ -16,7 +16,8 @@
       "params" [block-number true]
       "id" 1} (ToJson)
      (Http.Post server
-                :Timeout 60) (FromJson)
+                :Timeout 60
+                :Headers {"Content-Type" "application/json"}) (FromJson)
      (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq))))
 
 ; template eth_call
@@ -34,7 +35,8 @@
          "params" [{"to" to "data" data} "latest"]
          "id" 1} (ToJson)
         (Http.Post server
-                   :Timeout 60) (FromJson)
+                   :Timeout 60
+                   :Headers {"Content-Type" "application/json"}) (FromJson)
         (ExpectTable) (Take "result") (ExpectString))))
 
 ; template for block data fetching

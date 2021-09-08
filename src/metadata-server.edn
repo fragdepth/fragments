@@ -18,8 +18,8 @@
 (load-file (str "shared.edn"))
 
 (def main-rpc "https://cloudflare-eth.com")
-(def rinkeby-rpc "https://rinkeby-light.eth.linkpool.io")
-(def goerli-rpc "https://goerli-light.eth.linkpool.io")
+(def rinkeby-rpc "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
+(def goerli-rpc "https://goerli.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 
 (def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
 
@@ -56,15 +56,36 @@
                   "4" (-> rinkeby-rpc)
                   "5" (-> goerli-rpc)]
                  :Passthrough false) = .current-rpc-server)
-       (| (Take 2) = .templateId (FromBase58) = .templateIdBytes)
+       (| (Take 2) = .templateId)
        (| (Take 3) = .mutableHash)
        (| (Take 4) = .includeCost)
-       (| (Take 5) = .iblock)
-       (| (Take 6) = .mblock)
+       (| (Take 5) (ParseInt) (BigInt) (BigInt.ToHex) = .iblock)
+       (| (Take 6) (ParseInt) = .mblock-int (BigInt) (BigInt.ToHex) = .mblock)
 
-       {"block-number" .iblock
-        "frag-hash" .templateIdBytes
-        "expected-to" fragments} (Do fetch-block-data-upload) = .first-result
+       ; fetch the mutable data to read parameters from
+       "cache/mdata/" >= .mdata-file
+       .mutableHash (AppendTo .mdata-file)
+       (Maybe
+        (->
+         (ReadFile .mdata-file)
+         (ExpectBytes))
+        (->
+         .mblock-int
+         (If (Is 0)
+             (->
+              ; the mutable data is within the full upload
+              {"block-number" .iblock
+               "frag-hash" .templateId
+               "expected-to" fragments} (Log) (Do fetch-block-data-upload) (Take 1)
+              ; cache the data
+              (WriteFile .mdata-file :Flush true))
+             (->
+              ; the mutable data is within update
+              {"block-number" .iblock
+               "frag-hash" .mutableHash
+               "expected-to" fragments} (Do fetch-block-data-update) (Take 0)
+              ; cache the data
+              (WriteFile .mdata-file :Flush true)))))
 
        ; build image url
        img-server >= .imageUrl
