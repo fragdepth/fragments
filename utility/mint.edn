@@ -4,7 +4,7 @@
 (def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 (def include-cost uint256-max) ; uint256 max - don't allow inclusion
 (def entity-amount 1)
-(def fragments "0xC0DE33753E035d038327E948B6C3675200BDc6A1")
+(def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
 (def runtime "QmQRRM5c7uQaPMYG3XEWDzVbPawuLc3c4ZoFHm92GAWMk5")
 
 ; contracts abis

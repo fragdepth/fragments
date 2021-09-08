@@ -1,6 +1,6 @@
 ; template eth_getBlockByNumber call
 (if (get _parameters :metamask)
-  (defn __eth-get-block-by-number [block-number]
+  (defn __eth-get-block-by-number [block-number _server]
     (->
      (Msg "eth_getBlockByNumber")
      "(async () => { const res = await ethereum.request(" >= .request
@@ -9,40 +9,40 @@
      "); return JSON.stringify(res); })()" (AppendTo .request)
      .request (_Emscripten.EvalAsync) (FromJson)
      (ExpectTable) (Take "transactions") (ExpectSeq)))
-  (defn __eth-get-block-by-number [block-number]
+  (defn __eth-get-block-by-number [block-number server]
     (->
      {"jsonrpc" "2.0"
       "method" "eth_getBlockByNumber"
       "params" [block-number true]
       "id" 1} (ToJson)
-     (Http.Post (get _parameters :gatewayURL)
+     (Http.Post server
                 :Timeout 60) (FromJson)
      (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq))))
 
 ; template eth_call
 (if (get _parameters :metamask)
-  (defn __eth-call [to data]
+  (defn __eth-call [to data _server]
     (->
      "ethereum.request(" >= .request
      {"method" "eth_call"
       "params" [{"to" to "data" data} "latest"]} (ToJson) (AppendTo .request)
      ")" (AppendTo .request)
      .request (_Emscripten.EvalAsync)))
-  (defn __eth-call [to data]
+  (defn __eth-call [to data server]
     (-> {"jsonrpc" "2.0"
          "method" "eth_call"
          "params" [{"to" to "data" data} "latest"]
          "id" 1} (ToJson)
-        (Http.Post (get _parameters :gatewayURL)
+        (Http.Post server
                    :Timeout 60) (FromJson)
         (ExpectTable) (Take "result") (ExpectString))))
 
 ; template for block data fetching
-(defn __fetch-block-data [logic]
+(defn __fetch-block-data [logic server]
   (-> (| (Take "block-number") = .block-number)
       (| (Take "frag-hash") = .frag-hash)
       (| (Take "expected-to") (String.ToLower) = .expected-to)
-      (__eth-get-block-by-number .block-number) = .transactions
+      (__eth-get-block-by-number .block-number server) = .transactions
       (Sequence .result :Types Type.Bytes)
       .transactions
       (ForEach
@@ -63,7 +63,8 @@
                           .immutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
                           (When (Is .frag-hash) (-> .immutableData >> .result
                                                     .mutableData >> .result
-                                                    (Return))))))
+                                                    (Return))))
+                      .current-rpc-server))
 
 ; eth block fetcher - to fetch call datas of fragment template update calls
 (defchain fetch-block-data-update
@@ -74,7 +75,8 @@
                           (| (Take 1) (ExpectBytes) = .mutableData)
                           .mutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
                           (When (Is .frag-hash) (-> .mutableData >> .result
-                                                    (Return))))))
+                                                    (Return))))
+                      .current-rpc-server))
 
 (defchain fetch-block-data-entity
   (__fetch-block-data (-> .input
@@ -84,7 +86,8 @@
                                   (-> .call-input (Eth.DecodeCall entity-abi "upload" true)
                                       (Take 0) (ExpectBytes) >> .result
                                       (Return))
-                                  nil nil]))))
+                                  nil nil]))
+                      .current-rpc-server))
 
 ; utility function to load from chain or cache fragments
 (defn __frag-load-cached [hash]
@@ -97,10 +100,11 @@
      (ReadFile (str "cache/frag/" hash))
      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
     (-> ; download worst case scenario
+     (get _parameters :gatewayURL) = .current-rpc-server
      hash (Log "Downloading")
      hash (FromBase58) >> .hashBytes
      .hashBytes (Eth.EncodeCall frag-abi "dataOf") (ToHex) >= .callData
-     (__eth-call fragments .callData)
+     (__eth-call fragments .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall frag-abi "dataOf")
      (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
      (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
@@ -113,14 +117,14 @@
                         (->
                          .first-result (Take 0) >> .new-result
                          .hashBytes (Eth.EncodeCall frag-abi "mutableDataHashOf") (ToHex) > .callData
-                         (__eth-call fragments .callData)
+                         (__eth-call fragments .callData (get _parameters :gatewayURL))
                          (Eth.DecodeCall frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .env-hash
                          {"block-number" .mutable-block
                           "frag-hash" .env-hash
                           "expected-to" fragments} (Do fetch-block-data-update) (Take 0) >> .new-result
                          .new-result)) (Set .frag-result "data")
      .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
-     (__eth-call fragments .callData)
+     (__eth-call fragments .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
      .frag-result (WriteFile (str "cache/frag/" hash) :Flush true))
     :Silent true)))
@@ -211,19 +215,20 @@
      ;; (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true)
      )
     (-> ; download worst case scenario
+     (get _parameters :gatewayURL) = .current-rpc-server
      ; check if this contract is official if not crash
      [] (Eth.EncodeCall entity-abi "getLibrary") (ToHex) >= .callData
-     (__eth-call contract .callData)
+     (__eth-call contract .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall entity-abi "getLibrary")
      (Take 0) (ExpectString) (Assert.Is fragments true)
 
      ; fetch template hash
      [] (Eth.EncodeCall entity-abi "getTemplate") (ToHex) > .callData
-     (__eth-call contract .callData)
+     (__eth-call contract .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall entity-abi "getTemplate")
      (Take 0) (ExpectBytes) = .template-hash (Slice :From 12) (ToBase58) = .b58-template-hash
      [.template-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
-     (__eth-call fragments .callData)
+     (__eth-call fragments .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall frag-abi "dataOf")
      (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
      (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
@@ -235,7 +240,7 @@
      ; NFT actual data associated with id
      id (BigInt) (BigInt.ToBytes) = .bid
      [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) > .callData
-     (__eth-call contract .callData)
+     (__eth-call contract .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall entity-abi "getData")
      (| (Take 0) (ExpectBytes) = .env-hash)
      (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)

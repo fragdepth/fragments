@@ -31,7 +31,7 @@
 
 (def ipfs-gateway "https://cloudflare-ipfs.com")
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
-(def fragments "0xC0DEFeEB54C623952ba722E640bd599296F72e8b")
+(def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
 
 (def frag-abi (slurp (str "FragmentTemplate.json")))
 (def entity-abi (slurp (str "FragmentEntity.json")))
