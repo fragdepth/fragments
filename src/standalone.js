@@ -221,7 +221,7 @@ async function reloadCBL() {
 
       return window.chainblocks.canvas;
     })(),
-    arguments: ["/entry.edn", "--fragment", "3iSVZKMKUT1VjxDF11DPhRAGuQLd", "--metamask", "true"]
+    arguments: ["/entry.edn", "--fragment", "45XkDw38X9Wq5CmcCaCT8hg25VW1", "--metamask", "true"]
   });
 }
 

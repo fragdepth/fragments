@@ -86,6 +86,7 @@
                "expected-to" fragments} (Do fetch-block-data-update) (Take 0)
               ; cache the data
               (WriteFile .mdata-file :Flush true)))))
+       (Brotli.Decompress) (FromBytes) (ExpectTable) = .mdata
 
        ; build image url
        img-server >= .imageUrl
@@ -102,8 +103,13 @@
        .templateId (AppendTo .extUrl) (AppendTo .animUrl)
 
        ; build name
-       "Fragment " >= .name
-       .templateId (AppendTo .name)
+       .mdata (Take "t") (ExpectString) >= .name
+       " [" (AppendTo .name)
+       .templateId (Slice :To 4) (AppendTo .name)
+       ".." (AppendTo .name)
+       .templateId (Slice :From -2) (AppendTo .name)
+       "]" (AppendTo .name)
+       
        ; include cost attribute
        .includeCost
        (If (IsNot uint256-max)
