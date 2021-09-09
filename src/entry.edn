@@ -18,6 +18,8 @@
                   :clearColor (if (contains? _args "--clearColor") (read-string (get _args "--clearColor")) [7 7 7 255])
                   :xrSupported (if (contains? _args "--xrSupported") (read-string (get _args "--xrSupported")) false)
                   :metamask (if (contains? _args "--metamask") (read-string (get _args "--metamask")) false)
+                  :attributes (if (contains? _args "--attributes") (read-string (get _args "--attributes")) {})
+                  :description (if (contains? _args "--description") (read-string (get _args "--description")) "")
                   :gatewayURL (if (contains? _args "--gateway") (get _args "--gateway") "https://cloudflare-eth.com")})
 
 (if (not (= platform "emscripten"))
@@ -332,11 +334,13 @@
              version (Set .fs ".v")
              ; enviruments are not hashed here, so we can add structured data
              ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
+             (if (not (empty? (keys (get _parameters :attributes))))
+               (get _parameters :attributes) (Set .environment "a"))
+             (if (not (empty? (keys (get _parameters :description))))
+               (get _parameters :description) (Set .environment "d"))
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")
              (get _parameters :windowHeight) (Set .environment "h")
-             ; TODO PREVIEW IMAGE (goes into the svg) (ipfs cid only of a png)
-             ; TODO DESCRIPTION (goes into the svg)
              (slurp (str base-folder (get _parameters :mutable))) (EDN.Uglify) (Set .environment "e")
              ; compress and write
              .fs (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
