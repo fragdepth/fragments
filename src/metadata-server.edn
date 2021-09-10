@@ -92,16 +92,12 @@
               ; the mutable data is within the full upload
            {"block-number" .iblock
             "frag-hash" .templateId
-            "expected-to" fragments} (Log) (Do fetch-block-data-upload) (Take 1)
-              ; cache the data
-           (WriteFile .mdata-file :Flush true))
+            "expected-to" fragments} (Log) (Do fetch-block-data-upload) (Take 1))
           (->
               ; the mutable data is within update
            {"block-number" .iblock
             "frag-hash" .mutableHash
-            "expected-to" fragments} (Do fetch-block-data-update) (Take 0)
-              ; cache the data
-           (WriteFile .mdata-file :Flush true)))
+            "expected-to" fragments} (Do fetch-block-data-update) (Take 0)))
          (Brotli.Decompress) (FromBytes) (ExpectTable) = .mdata
 
          ; build image url
@@ -171,7 +167,7 @@
        (Restart))))
 
   ; entity metadata request
-  (| (Regex.Match #"\/\?ch=(\d+)&id=(\d+)&e=(\w+)&m=(\w+)&d=(\d+)") >= .match
+  (| (Regex.Match #"\/\?ch=(\d+)&id=(\d+)&e=(\w+)&m=(\w+)&d=(\d+)") > .match
      (Count .match)
      (When
       (Is 6)
@@ -183,11 +179,67 @@
          .match
          (set-rpc-server)
          (| (Take 2) = .entityId)
-         (| (Take 3) (FromBase58) (ToHex) = .entityContract)
+         (| (Take 3) = .b58Contract (FromBase58) (ToHex) = .entityContract)
          (| (Take 4) = .mutableHash)
          (| (Take 5) (ParseInt) (BigInt) (BigInt.ToHex) = .mblock)
 
-         "{}"))
+         {"block-number" .mblock
+          "frag-hash" .mutableHash
+          "expected-to" .entityContract} (Log) (Do fetch-block-data-entity) (Take 0)
+         (Brotli.Decompress) (FromBytes) (ExpectTable) = .mdata
+
+         ; build image url
+         img-server >= .imageUrl
+         ; we cache by hash images on the image server
+         [.entityId .entityContract .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
+
+          ; build both normal and embedded player
+         player-server >= .extUrl
+         embed-server >= .animUrl
+         "?ch=" (AppendTo .extUrl) (AppendTo .animUrl)
+         .chainId (AppendTo .extUrl) (AppendTo .animUrl)
+         "&id=" (AppendTo .extUrl) (AppendTo .animUrl)
+         .entityId (AppendTo .extUrl) (AppendTo .animUrl)
+         "&e=" (AppendTo .extUrl) (AppendTo .animUrl)
+         .b58Contract (AppendTo .extUrl) (AppendTo .animUrl)
+         "&w=" (AppendTo .extUrl) (AppendTo .animUrl)
+         .mdata (Take "w") (ExpectInt) (ToString) (AppendTo .extUrl) (AppendTo .animUrl)
+         "&h=" (AppendTo .extUrl) (AppendTo .animUrl)
+         .mdata (Take "h") (ExpectInt) (ToString) (AppendTo .extUrl) (AppendTo .animUrl)
+
+         ; build name
+         .mdata (Take "t") (ExpectString) >= .name
+
+         (Clear .attribs) ; defined above in template / same type
+
+         ; find custom attributes
+         .mdata (Take "a")
+         (When
+          (IsNotNone)
+          (->
+           (ExpectLike {"" ""})
+           (ForEach
+            (->
+             (| (Take 0) = .tname)
+             (| (Take 1) = .tvalue)
+             ; maybe filter them here!
+             {"trait_type" .tname
+              "value" .tvalue} >> .attribs))))
+
+         ; find custom description
+         .mdata (Take "d")
+         (If
+          (IsNotNone)
+          (-> (ExpectString))
+          (-> "No description")) = .description
+
+         ; json response
+         {"name" .name
+          "description" .description
+          "external_url" .extUrl
+          "animation_url" .animUrl
+          "image" .imageUrl
+          "attributes" .attribs} (ToJson)))
        (Http.Response :Headers {"Content-Type" "application/json"})
 
        (Restart))))
