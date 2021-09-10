@@ -221,7 +221,7 @@ async function reloadCBL() {
 
       return window.chainblocks.canvas;
     })(),
-    arguments: ["/entry.edn", "--fragment", "45XkDw38X9Wq5CmcCaCT8hg25VW1", "--metamask", "true"]
+    arguments: ["/entry.edn", "--fragment", "45XkDw38X9Wq5CmcCaCT8hg25VW1", "--gateway", "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046"]
   });
 }
 

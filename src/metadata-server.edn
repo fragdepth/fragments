@@ -2,6 +2,7 @@
 
 (def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")
                   :port (if (contains? _args "--port") (read-string (get _args "--port")) 7070)
+                  :cache (if (contains? _args "--cache") (read-string (get _args "--cache")) true)
                   :gatewayURL (if (contains? _args "--gateway") (get _args "--gateway") "https://cloudflare-eth.com")})
 
 (if (not (= platform "emscripten"))
@@ -44,18 +45,20 @@
                  "5" (-> goerli-rpc)]
                 :Passthrough false) = .current-rpc-server)))
 
-(defn cached-request [logic]
-  (-> ; let's have a fast path for metadata
-   .request (Take "target") (Hash.Keccak-256) (ToBase58) = .targetHash
-   "cache/metadata/" >= .mdata-file
-   .targetHash (AppendTo .mdata-file)
-   (Maybe
-    (->
-     (ReadFile .mdata-file)
-     (ExpectString))
-    (->
-     logic
-     (WriteFile .mdata-file :Flush true)))))
+(if (get _parameters :cache)
+  (defn cached-request [logic]
+    (-> ; let's have a fast path for metadata
+     .request (Take "target") (Hash.Keccak-256) (ToBase58) = .targetHash
+     "cache/metadata/" >= .mdata-file
+     .targetHash (AppendTo .mdata-file)
+     (Maybe
+      (->
+       (ReadFile .mdata-file)
+       (ExpectString))
+      (->
+       logic
+       (WriteFile .mdata-file :Flush true)))))
+  (defn cached-request [logic] logic))
 
 (defloop handler ; must be loop!
   (Http.Read) = .request
@@ -83,21 +86,22 @@
 
          ; fetch the mutable data to read parameters from
          .mblock-int
-         (If (Is 0)
-             (->
+         (If
+          (Is 0)
+          (->
               ; the mutable data is within the full upload
-              {"block-number" .iblock
-               "frag-hash" .templateId
-               "expected-to" fragments} (Log) (Do fetch-block-data-upload) (Take 1)
+           {"block-number" .iblock
+            "frag-hash" .templateId
+            "expected-to" fragments} (Log) (Do fetch-block-data-upload) (Take 1)
               ; cache the data
-              (WriteFile .mdata-file :Flush true))
-             (->
+           (WriteFile .mdata-file :Flush true))
+          (->
               ; the mutable data is within update
-              {"block-number" .iblock
-               "frag-hash" .mutableHash
-               "expected-to" fragments} (Do fetch-block-data-update) (Take 0)
+           {"block-number" .iblock
+            "frag-hash" .mutableHash
+            "expected-to" fragments} (Do fetch-block-data-update) (Take 0)
               ; cache the data
-              (WriteFile .mdata-file :Flush true)))
+           (WriteFile .mdata-file :Flush true)))
          (Brotli.Decompress) (FromBytes) (ExpectTable) = .mdata
 
          ; build image url

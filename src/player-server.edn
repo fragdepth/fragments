@@ -10,6 +10,7 @@
                     "Access-Control-Allow-Origin" "*"})
 
 (def headers (if (contains? _args "--embed") (if (read-string (get _args "--embed")) headers-embed headers-self) headers-self))
+(def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
 
 (println headers)
 
@@ -28,7 +29,7 @@
           nil (-> .target (Http.SendFile headers))]))
 
 (defloop main
-  (Http.Server handler))
+  (Http.Server handler :Port port))
 
 (schedule Root main)
 (run Root 0.1)
