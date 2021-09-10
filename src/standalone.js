@@ -147,8 +147,8 @@ async function reloadCBL() {
 
       module.FS.writeFile("/entry.edn", window.chainblocks.mainScript);
 
-      module.FS.createPreloadedFile("/", "FragmentEntity.json", "FragmentEntity.json", true, false);
-      module.FS.createPreloadedFile("/", "FragmentTemplate.json", "FragmentTemplate.json", true, false);
+      module.FS.createPreloadedFile("/", "Entity.json", "Entity.json", true, false);
+      module.FS.createPreloadedFile("/", "Fragment.json", "Fragment.json", true, false);
       module.FS.createPreloadedFile("/", "utility.edn", "utility.edn", true, false);
       module.FS.createPreloadedFile("/", "shared.edn", "shared.edn", true, false);
 

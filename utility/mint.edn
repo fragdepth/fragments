@@ -8,8 +8,8 @@
 (def runtime "QmQRRM5c7uQaPMYG3XEWDzVbPawuLc3c4ZoFHm92GAWMk5")
 
 ; contracts abis
-(def template-abi (slurp "../src/FragmentTemplate.json"))
-(def entity-abi (slurp "../src/FragmentEntity.json"))
+(def template-abi (slurp "../src/Fragment.json"))
+(def entity-abi (slurp "../src/Entity.json"))
 
 ; file minting environment
 (def file-env {"e" "" ; environment 

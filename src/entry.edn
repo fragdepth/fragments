@@ -35,8 +35,8 @@
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
 (def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
 
-(def frag-abi (slurp (str "FragmentTemplate.json")))
-(def entity-abi (slurp (str "FragmentEntity.json")))
+(def frag-abi (slurp (str "Fragment.json")))
+(def entity-abi (slurp (str "Entity.json")))
 
 (load-file (str "shared.edn"))
 
@@ -336,7 +336,7 @@
              ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
              (if (not (empty? (keys (get _parameters :attributes))))
                (get _parameters :attributes) (Set .environment "a"))
-             (if (not (empty? (keys (get _parameters :description))))
+             (if (not (= "" (get _parameters :description)))
                (get _parameters :description) (Set .environment "d"))
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")

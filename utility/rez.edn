@@ -14,8 +14,8 @@
 ; Vault: 0x850f8c7f943Ad06ABe06a97015f8935bB3925125
 
 ; contracts abis
-(def template-abi (slurp "../src/FragmentTemplate.json"))
-(def entity-abi (slurp "../src/FragmentEntity.json"))
+(def template-abi (slurp "../src/Fragment.json"))
+(def entity-abi (slurp "../src/Entity.json"))
 
 (defchain minter
   template-hash (FromBase58) = .templateHash
