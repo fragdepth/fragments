@@ -79,10 +79,31 @@ async function reloadCBL() {
 
   const queryString = window.location.search;
   const urlParams = new URLSearchParams(queryString);
-  const userDefinedWidth = urlParams.get('width')
-  const userDefinedHeight = urlParams.get('height')
+  const userDefinedWidth = urlParams.get('w')
+  const userDefinedHeight = urlParams.get('h')
+  const chainId = urlParams.get("ch");
+  const entityB58 = urlParams.get("e");
+  const entityId = urlParams.get("id");
+  const templateId = urlParams.get("t");
 
-  if (userDefinedWidth!== null || userDefinedWidth!== null ){
+  const args = (() => {
+    const gateway = (() => {
+      if (chainId == 1) {
+        return "https://cloudflare-eth.com";
+      } else if (chainId == 4) {
+        return "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046";
+      } else if (chainId == 5) {
+        return "https://goerli.infura.io/v3/f1f1f88885f54de7955ce248e1d69046";
+      }
+    })();
+    if (entityB58) {
+      return ["/entry.edn", "--entity", entityB58, "--entity-id", entityId, "--gateway", gateway];
+    } else {
+      return ["/entry.edn", "--fragment", templateId, "--gateway", gateway]
+    }
+  })();
+
+  if (userDefinedWidth !== null || userDefinedWidth !== null) {
     window.chainblocks.canvas.style.width = userDefinedWidth + 'px';
     window.chainblocks.canvas.style.height = userDefinedHeight + 'px';
     console.log('resize canvas');
@@ -233,9 +254,7 @@ async function reloadCBL() {
 
       return window.chainblocks.canvas;
     })(),
-    arguments: ["/entry.edn", "--fragment", "3iSVZKMKUT1VjxDF11DPhRAGuQLd", "--metamask", "true"]
-    // In case Metamask doesn't connect succesfully, use the following:
-    // arguments: ["/entry.edn", "--fragment", "45XkDw38X9Wq5CmcCaCT8hg25VW1", "--gateway", "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046"]
+    arguments: args
   });
 }
 

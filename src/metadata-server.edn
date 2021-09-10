@@ -34,8 +34,7 @@
 (def license-commercial-use "CC BY-SA 4.0")
 (def license-non-commercial-use "CC BY-NC-ND 4.0")
 (def img-server "https://img.fragments.foundation/")
-(def player-server "https://player.fragments.foundation/")
-(def embed-server "https://embed.fragments.foundation/")
+(def runtime-server "https://runtime.fragments.foundation/")
 (def uint256-max "115792089237316195423570985008687907853269984665640564039457584007913129639935")
 
 (defn set-rpc-server []
@@ -106,8 +105,9 @@
          [.templateId .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
 
          ; build both normal and embedded player
-         player-server >= .extUrl
-         embed-server >= .animUrl
+         runtime-server >= .extUrl >= .animUrl
+         "player.html" (AppendTo .extUrl)
+         "embed.html" (AppendTo .animUrl)
          "?ch=" (AppendTo .extUrl) (AppendTo .animUrl)
          .chainId (AppendTo .extUrl) (AppendTo .animUrl)
          "&t=" (AppendTo .extUrl) (AppendTo .animUrl)
@@ -194,8 +194,9 @@
          [.entityId .entityContract .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
 
           ; build both normal and embedded player
-         player-server >= .extUrl
-         embed-server >= .animUrl
+         runtime-server >= .extUrl >= .animUrl
+         "player.html" (AppendTo .extUrl)
+         "embed.html" (AppendTo .animUrl)
          "?ch=" (AppendTo .extUrl) (AppendTo .animUrl)
          .chainId (AppendTo .extUrl) (AppendTo .animUrl)
          "&id=" (AppendTo .extUrl) (AppendTo .animUrl)
