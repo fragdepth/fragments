@@ -31,7 +31,7 @@
 (def tmp-folder "tmp/")
 (def base-folder (str "user/" (get _parameters :rootFolder)))
 
-(def ipfs-gateway "https://cloudflare-ipfs.com")
+(def ipfs-gateway "https://ipfs.io")
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
 (def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
 
