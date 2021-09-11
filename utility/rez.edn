@@ -1,40 +1,49 @@
 ; parameters
-(def template-hash (slurp "../src/live-chain-eth-id"))
+(def template-hash (slurp "../src/tmp/live-chain-eth-id"))
 (def token-name "My Rez Fragment n.1")
 (def token-symbol "REZ1")
 (def unique true)
-(def can-update false)
+(def can-update true)
 (def uint96-max "0xffffffffffffffffffffffffffffffffffffffff") ; mint tokens forever
-(def _10_000 "0x2710") ; mint 10k tokens
+(def _10_000 "0xA") ; mint 10 tokens
 (def max-supply _10_000)
 (def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
 
 ; contracts are deterministic so should be:
-; Entity: 0x16cD316D75EBAfC368E5633ee3CD4e032b099038
-; Vault: 0x850f8c7f943Ad06ABe06a97015f8935bB3925125
+; Entity: 0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882
+; Vault: 0x935869092b1B374e75e19DBF8b68EC16054C4F05
 
 ; contracts abis
 (def template-abi (slurp "../src/Fragment.json"))
 (def entity-abi (slurp "../src/Entity.json"))
+
+(defn metamask-call [dest call]
+  (->
+   (str "await ethereum.request({method: 'eth_sendTransaction', params: [{from: ethereum.selectedAddress, to: \"" dest "\", data: \"") (PrependTo call)
+   "\"}]})" (AppendTo call) call))
 
 (defchain minter
   template-hash (FromBase58) = .templateHash
   max-supply (BigInt) (BigInt.ToBytes) = .maxSupply
   [.templateHash token-name token-symbol unique can-update .maxSupply]
   (Eth.EncodeCall template-abi "rez")
-  (ToHex) (Log "Call Input"))
+  (ToHex) >= .call
+  (metamask-call "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162" .call)
+  (Log "Call Input"))
 
 (defchain delegate
-  private-key-base (Hash.Keccak-256) = .privateKeyBase
-  (| (ECDSA.PublicKey)
-     (Slice :From 1)
-     (Hash.Keccak-256)
-     (Slice :From 12)
-     (ToHex)
-     (Log "Eth Address") = .delegate)
+  private-key-base (Hash.Keccak-256) (| (ToHex) (Log "Private key"))
+  (ECDSA.PublicKey)
+  (Slice :From 1)
+  (Hash.Keccak-256)
+  (Slice :From 12)
+  (ToHex)
+  (Log "Eth Address") = .delegate
   [.delegate]
   (Eth.EncodeCall entity-abi "setDelegate")
-  (ToHex) (Log "Call Input"))
+  (ToHex) >= .call
+  (metamask-call "0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882" .call)
+  (Log "Call Input"))
 
 (defnode main)
 (schedule main minter)
