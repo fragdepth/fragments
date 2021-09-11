@@ -1,7 +1,7 @@
 ; parameters
 (def template-hash (slurp "../src/tmp/live-chain-eth-id"))
-(def token-name "My Rez Fragment n.1")
-(def token-symbol "REZ1")
+(def token-name "Rez Entity Test")
+(def token-symbol "RTEST")
 (def unique true)
 (def can-update true)
 (def uint96-max "0xffffffffffffffffffffffffffffffffffffffff") ; mint tokens forever
@@ -10,8 +10,8 @@
 (def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
 
 ; contracts are deterministic so should be:
-; Entity: 0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882
-; Vault: 0x935869092b1B374e75e19DBF8b68EC16054C4F05
+; Entity: 0x153D778F3Bdae819309385D4d9D64e29E4e9ae47
+; Vault: 0x15fc43067f7370d3d9e0c09D4C74DA37af8566ae
 
 ; contracts abis
 (def template-abi (slurp "../src/Fragment.json"))
@@ -22,7 +22,7 @@
    (str "await ethereum.request({method: 'eth_sendTransaction', params: [{from: ethereum.selectedAddress, to: \"" dest "\", data: \"") (PrependTo call)
    "\"}]})" (AppendTo call) call))
 
-(defchain minter
+(defchain rezzer
   template-hash (FromBase58) = .templateHash
   max-supply (BigInt) (BigInt.ToBytes) = .maxSupply
   [.templateHash token-name token-symbol unique can-update .maxSupply]
@@ -42,7 +42,7 @@
   [.delegate]
   (Eth.EncodeCall entity-abi "setDelegate")
   (ToHex) >= .call
-  (metamask-call "0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882" .call)
+  (metamask-call "0x153D778F3Bdae819309385D4d9D64e29E4e9ae47" .call)
   (Log "Call Input"))
 
 (defchain enable-public
@@ -51,11 +51,11 @@
   [.eth-price .amount .amount]
   (Eth.EncodeCall entity-abi "setPublicSale")
   (ToHex) >= .call
-  (metamask-call "0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882" .call)
+  (metamask-call "0x153D778F3Bdae819309385D4d9D64e29E4e9ae47" .call)
   (Log "Call Input"))
 
 (defnode main)
-(schedule main minter)
+(schedule main rezzer)
 (schedule main delegate)
 (schedule main enable-public)
 (run main)
