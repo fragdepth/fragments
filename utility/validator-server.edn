@@ -15,7 +15,11 @@
 (defn sign []
   (->
    private-key-base (Hash.Keccak-256) = .private-key
-   .payload (Log) (Hash.Keccak-256) (ECDSA.Sign .private-key) = .signature (Log)
+   .payload (Hash.Keccak-256) = .message-hash
+   "0x19" (HexToBytes) >= .message
+   "Ethereum Signed Message:\n32" (StringToBytes) (AppendTo .message)
+   .message-hash (AppendTo .message)
+   .message (Hash.Keccak-256) (ECDSA.Sign .private-key) = .signature
    (Take 0) >= .signaturePayload
    27 (BigInt) = .b27
    .signature (Take 1) (BigInt) (BigInt.Add .b27) (BigInt.ToBytes :Bits 8) (AppendTo .signaturePayload)
@@ -46,13 +50,12 @@
            (When (IsMore max-amount) (-> (Restart)))
 
            ; prepare bytes payload for signature
-           (Clear .payload)
            (Clear .result)
-           .data (Take "sender") (ExpectString) (HexToBytes) >> .payload
-           chainId (BigInt) (BigInt.ToBytes :Bits 256) >> .payload
-           fragmentId (FromBase58) >> .payload
-           (custom-logic) >> .result >> .payload
-           .amount (BigInt) (BigInt.ToBytes :Bits 96) >> .payload
+           .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
+           chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
+           fragmentId (FromBase58) (AppendTo .payload)
+           (custom-logic) >> .result (HexToBytes) (AppendTo .payload)
+           .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
 
            (sign) >> .result
            .result (ToJson) (Http.Response))
@@ -62,12 +65,11 @@
            .request (Take "body") (FromJson) (ExpectTable) = .data
 
            ; prepare bytes payload for signature
-           (Clear .payload)
            (Clear .result)
-           .data (Take "sender") (ExpectString) (HexToBytes) >> .payload
-           chainId (BigInt) (BigInt.ToBytes :Bits 256) >> .payload
-           fragmentId (FromBase58) >> .payload
-           (custom-logic) >> .result >> .payload
+           .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
+           chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
+           fragmentId (FromBase58) (AppendTo .payload)
+           (custom-logic) >> .result (HexToBytes) (AppendTo .payload)
 
            (sign) >> .result
            .result (ToJson) (Http.Response))

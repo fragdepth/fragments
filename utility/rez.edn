@@ -45,7 +45,17 @@
   (metamask-call "0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882" .call)
   (Log "Call Input"))
 
+(defchain enable-public
+  0.01 (BigInt.FromFloat 18) (| (BigInt.ToString) (Log)) (BigInt.ToBytes) = .eth-price
+  10 (BigInt) (BigInt.ToBytes) = .amount
+  [.eth-price .amount .amount]
+  (Eth.EncodeCall entity-abi "setPublicSale")
+  (ToHex) >= .call
+  (metamask-call "0xb809F56584CDbf6c7e6460FfA6ef6FcfD0AbB882" .call)
+  (Log "Call Input"))
+
 (defnode main)
 (schedule main minter)
 (schedule main delegate)
+(schedule main enable-public)
 (run main)
