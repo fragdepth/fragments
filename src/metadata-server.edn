@@ -114,10 +114,10 @@
          .chainId (AppendTo .extUrl) (AppendTo .animUrl)
          "&t=" (AppendTo .extUrl) (AppendTo .animUrl)
          .templateId (AppendTo .extUrl) (AppendTo .animUrl)
-         "&w=" (AppendTo .extUrl) (AppendTo .animUrl)
-         .mdata (Take "w") (ExpectInt) (ToString) (AppendTo .extUrl) (AppendTo .animUrl)
-         "&h=" (AppendTo .extUrl) (AppendTo .animUrl)
-         .mdata (Take "h") (ExpectInt) (ToString) (AppendTo .extUrl) (AppendTo .animUrl)
+         "&w=" (AppendTo .extUrl)
+         .mdata (Take "w") (ExpectInt) (ToString) (AppendTo .extUrl) 
+         "&h=" (AppendTo .extUrl)
+         .mdata (Take "h") (ExpectInt) (ToString) (AppendTo .extUrl) 
 
          ; build name
          .mdata (Take "t") (ExpectString) >= .name
@@ -206,10 +206,10 @@
          .entityId (AppendTo .extUrl) (AppendTo .animUrl)
          "&e=" (AppendTo .extUrl) (AppendTo .animUrl)
          .b58Contract (AppendTo .extUrl) (AppendTo .animUrl)
-         "&w=" (AppendTo .extUrl) (AppendTo .animUrl)
-         .mdata (Take "w") (ExpectInt) (ToString) (AppendTo .extUrl) (AppendTo .animUrl)
-         "&h=" (AppendTo .extUrl) (AppendTo .animUrl)
-         .mdata (Take "h") (ExpectInt) (ToString) (AppendTo .extUrl) (AppendTo .animUrl)
+         "&w=" (AppendTo .extUrl)
+         .mdata (Take "w") (ExpectInt) (ToString) (AppendTo .extUrl)
+         "&h=" (AppendTo .extUrl)
+         .mdata (Take "h") (ExpectInt) (ToString) (AppendTo .extUrl)
 
          ; build name
          .mdata (Take "t") (ExpectString) >= .name
