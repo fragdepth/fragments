@@ -33,7 +33,7 @@
 
 (def ipfs-gateway "https://ipfs.io")
 (def ar-gateway "https://coldcdn.com/api/cdn/arweave")
-(def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
+(def fragments "0xc0de7dd77e69d25a53fe05f8d3fe772654c29162") ; MUST BE LOW CASE
 
 (def frag-abi (slurp (str "Fragment.json")))
 (def entity-abi (slurp (str "Entity.json")))

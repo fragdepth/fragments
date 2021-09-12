@@ -146,7 +146,8 @@
      ; TODO, decide how to flag cached content for update after a mutation happened
      (ReadFile (str "cache/frag/" hash))
      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
-    (-> ; download worst case scenario
+    (-> 
+     ; download worst case scenario
      (get _parameters :gatewayURL) = .current-rpc-server
      hash (Log "Downloading")
      hash (FromBase58) >> .hashBytes
@@ -244,45 +245,47 @@
 
 (defn __entity-load-cached [contract id]
   (->
+   "" >= .b58-template-hash
    (Maybe
     (->
      (ReadFile (str "cache/entity/" contract "-" id))
      (ExpectBytesSeq)
-     ;; (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true)
-     )
-    (-> ; download worst case scenario
+     (| (Take 2) (ToBase58) > .b58-template-hash))
+    (-> 
+     contract (FromBase58) (ToHex) = .contract-address
+     ; download worst case scenario
      (get _parameters :gatewayURL) = .current-rpc-server
      ; check if this contract is official if not crash
      [] (Eth.EncodeCall entity-abi "getLibrary") (ToHex) >= .callData
-     (__eth-call contract .callData (get _parameters :gatewayURL))
+     (__eth-call .contract-address .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall entity-abi "getLibrary")
      (Take 0) (ExpectString) (Assert.Is fragments true)
 
      ; fetch template hash
      [] (Eth.EncodeCall entity-abi "getTemplate") (ToHex) > .callData
-     (__eth-call contract .callData (get _parameters :gatewayURL))
+     (__eth-call .contract-address .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall entity-abi "getTemplate")
-     (Take 0) (ExpectBytes) = .template-hash (Slice :From 12) (ToBase58) = .b58-template-hash
+     (Take 0) (ExpectBytes) >= .template-hash (Slice :From 12) > .template-hash (ToBase58) > .b58-template-hash
      [.template-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
      (__eth-call fragments .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall frag-abi "dataOf")
      (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
-     (| (Take 2) (ExpectBytes) (ToHex) = .ipfs-runtime)
      ; fetch block with immutable data
      {"block-number" .immutable-block
       "frag-hash" .b58-template-hash
-      "expected-to" fragments} (Do fetch-block-data-upload) = .first-result
+      "expected-to" fragments} (Do fetch-block-data-upload) >= .first-result
 
      ; NFT actual data associated with id
      id (BigInt) (BigInt.ToBytes) = .bid
      [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) > .callData
-     (__eth-call contract .callData (get _parameters :gatewayURL))
+     (__eth-call .contract-address .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall entity-abi "getData")
      (| (Take 0) (ExpectBytes) = .env-hash)
      (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
      {"block-number" .mutable-block
       "frag-hash" .env-hash
-      "expected-to" contract} (Do fetch-block-data-entity) (Take 0) = .entity-data
+      "expected-to" .contract-address} (Do fetch-block-data-entity) (Take 0) = .entity-data
      [1 .entity-data] (Assoc .first-result)
+     .template-hash (Push .first-result :Clear false)
      .first-result (WriteFile (str "cache/entity/" contract "-" id) :Flush true))
     :Silent true)))
