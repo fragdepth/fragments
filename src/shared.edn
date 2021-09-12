@@ -108,23 +108,31 @@
   (__fetch-block-data
    (-> .input
        (| (ExpectString) (Slice :From 10) = .call-input)
-       (ExpectString) (Slice :To 10) (Log "method")
+       (ExpectString) (Slice :To 10)
        (Match [entity-call-update
-               (-> .call-input (Eth.DecodeCall entity-abi "update" true)
-                   (Take 2) (ExpectBytes) >> .result
-                   (Return))
+               (->
+                (Msg "method-update")
+                .call-input (Eth.DecodeCall entity-abi "update" true)
+                (Take 2) (ExpectBytes) >> .result
+                (Return))
                entity-call-upload
-               (-> .call-input (Eth.DecodeCall entity-abi "upload" true)
-                   (Take 0) (ExpectBytes) >> .result
-                   (Return))
+               (->
+                (Msg "method-upload")
+                .call-input (Eth.DecodeCall entity-abi "upload" true)
+                (Take 0) (ExpectBytes) >> .result
+                (Return))
                entity-call-mint
-               (-> .call-input (Eth.DecodeCall entity-abi "mint" true)
-                   (Take 1) (ExpectBytes) >> .result
-                   (Return))
+               (->
+                (Msg "method-mint")
+                .call-input (Eth.DecodeCall entity-abi "mint" true)
+                (Take 1) (ExpectBytes) >> .result
+                (Return))
                entity-call-bid
-               (-> .call-input (Eth.DecodeCall entity-abi "bid" true)
-                   (Take 1) (ExpectBytes) >> .result
-                   (Return))
+               (->
+                (Msg "method-bid")
+                .call-input (Eth.DecodeCall entity-abi "bid" true)
+                (Take 1) (ExpectBytes) >> .result
+                (Return))
                nil nil]))
    .current-rpc-server))
 

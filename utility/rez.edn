@@ -10,8 +10,8 @@
 (def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
 
 ; contracts are deterministic so should be:
-; Entity: 0x153D778F3Bdae819309385D4d9D64e29E4e9ae47
-; Vault: 0x15fc43067f7370d3d9e0c09D4C74DA37af8566ae
+; Entity: 0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31
+; Vault: 0x712720eEe33DA537980AdCf37Bb8fDfcf01B1B23
 
 ; contracts abis
 (def template-abi (slurp "../src/Fragment.json"))
@@ -42,7 +42,7 @@
   [.delegate]
   (Eth.EncodeCall entity-abi "setDelegate")
   (ToHex) >= .call
-  (metamask-call "0x153D778F3Bdae819309385D4d9D64e29E4e9ae47" .call)
+  (metamask-call "0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31" .call)
   (Log "Call Input"))
 
 (defchain enable-public
@@ -51,7 +51,7 @@
   [.eth-price .amount .amount]
   (Eth.EncodeCall entity-abi "setPublicSale")
   (ToHex) >= .call
-  (metamask-call "0x153D778F3Bdae819309385D4d9D64e29E4e9ae47" .call)
+  (metamask-call "0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31" .call)
   (Log "Call Input"))
 
 (defnode main)
