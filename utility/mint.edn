@@ -8,7 +8,7 @@
 (def runtime "QmQRRM5c7uQaPMYG3XEWDzVbPawuLc3c4ZoFHm92GAWMk5")
 
 ; contracts abis
-(def template-abi (slurp "../src/Fragment.json"))
+(def fragment-abi (slurp "../src/Fragment.json"))
 (def entity-abi (slurp "../src/Entity.json"))
 
 ; file minting environment
@@ -26,15 +26,15 @@
 (if (empty? *command-line-args*)
   (do
     ; code/script, use working directory artifacts
-    (defchain template-minter
+    (defchain fragment-minter
       "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
       "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
       [.immutableData .mutableData [] .includeCost]
-      (Eth.EncodeCall template-abi "upload")
+      (Eth.EncodeCall fragment-abi "upload")
       (ToHex) >= .call
       (metamask-call fragments .call)
-      (Log "upload-template"))
+      (Log "upload-fragment"))
 
     (defchain entity-minter
       "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
@@ -48,12 +48,12 @@
     (defchain runtime-setter
       runtime (FromBase58) (Slice :From 2) (Log) = .runtime
       [.runtime]
-      (Eth.EncodeCall template-abi "setIpfsRuntime")
+      (Eth.EncodeCall fragment-abi "setIpfsRuntime")
       (ToHex) >= .call
       (metamask-call fragments .call)
-      (Log "setIpfsRuntime-template"))
+      (Log "setIpfsRuntime-fragment"))
 
-    (schedule main template-minter)
+    (schedule main fragment-minter)
     (schedule main entity-minter)
     (schedule main runtime-setter))
   (do
@@ -68,7 +68,7 @@
       file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
       include-cost (BigInt) (BigInt.ToBytes) = .includeCost
       [.immutableData .mutableData [] .includeCost]
-      (Eth.EncodeCall template-abi "upload")
+      (Eth.EncodeCall fragment-abi "upload")
       (Log)
       (ToHex) (Log "Call Input")
       "../src/cache/frag/" >= .filename

@@ -1,5 +1,5 @@
 ; parameters
-(def template-hash (slurp "../src/tmp/live-chain-eth-id"))
+(def fragment-hash (slurp "../src/tmp/live-chain-eth-id"))
 (def token-name "Rez Entity Test")
 (def token-symbol "RTEST")
 (def unique true)
@@ -14,7 +14,7 @@
 ; Vault: 0x712720eEe33DA537980AdCf37Bb8fDfcf01B1B23
 
 ; contracts abis
-(def template-abi (slurp "../src/Fragment.json"))
+(def fragment-abi (slurp "../src/Fragment.json"))
 (def entity-abi (slurp "../src/Entity.json"))
 
 (defn metamask-call [dest call]
@@ -23,10 +23,10 @@
    "\"}]})" (AppendTo call) call))
 
 (defchain rezzer
-  template-hash (FromBase58) = .templateHash
+  fragment-hash (FromBase58) = .fragmentHash
   max-supply (BigInt) (BigInt.ToBytes) = .maxSupply
-  [.templateHash token-name token-symbol unique can-update .maxSupply]
-  (Eth.EncodeCall template-abi "rez")
+  [.fragmentHash token-name token-symbol unique can-update .maxSupply]
+  (Eth.EncodeCall fragment-abi "rez")
   (ToHex) >= .call
   (metamask-call "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162" .call)
   (Log "Call Input"))

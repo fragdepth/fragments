@@ -97,19 +97,19 @@
      (GFX.Shader :VertexShader .vs-bytes :PixelShader .fs-bytes))))
 
 ; this is used only inside ExpectLike blocks as an example output type
-(defchain __downloader-chain-template
+(defchain __downloader-chain-fragment
   nil (Http.Get ""
                 :Bytes true
                 :FullResponse true
                 :Timeout 60))
-(prepare __downloader-chain-template)
+(prepare __downloader-chain-fragment)
 
 (defn __ipfs-load-cached [hash full]
   (->
    (Maybe (->
            (ReadFile (str "cache/ipfs/" hash (if full "F" "B")))
            (if full 
-             (ExpectLike __downloader-chain-template :Unsafe true)
+             (ExpectLike __downloader-chain-fragment :Unsafe true)
              (ExpectBytes)))
           (-> ; download worst case scenario
            hash (Log "Downloading from ipfs")
@@ -125,7 +125,7 @@
    (Maybe (->
            (ReadFile (str "cache/ar/" tx (if full "F" "B")))
            (if full
-             (ExpectLike __downloader-chain-template :Unsafe true)
+             (ExpectLike __downloader-chain-fragment :Unsafe true)
              (ExpectBytes)))
           (-> ; download worst case scenario
            tx (Log "Downloading from arweave")

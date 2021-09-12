@@ -610,7 +610,7 @@
         "components": [
           {
             "internalType": "uint160",
-            "name": "templateId",
+            "name": "fragmentId",
             "type": "uint160"
           },
           {
@@ -620,7 +620,7 @@
           },
           {
             "internalType": "address",
-            "name": "templatesLibrary",
+            "name": "fragmentsLibrary",
             "type": "address"
           },
           {
@@ -711,7 +711,7 @@
   },
   {
     "inputs": [],
-    "name": "getTemplate",
+    "name": "getFragment",
     "outputs": [
       {
         "internalType": "uint160",

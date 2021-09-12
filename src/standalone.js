@@ -84,7 +84,7 @@ async function reloadCBL() {
   const chainId = urlParams.get("ch");
   const entityB58 = urlParams.get("e");
   const entityId = urlParams.get("id");
-  const templateId = urlParams.get("t");
+  const fragmentId = urlParams.get("t");
 
   const args = (() => {
     const gateway = (() => {
@@ -99,7 +99,7 @@ async function reloadCBL() {
     if (entityB58) {
       return ["/entry.edn", "--entity", entityB58, "--entity-id", entityId, "--gateway", gateway];
     } else {
-      return ["/entry.edn", "--fragment", templateId, "--gateway", gateway]
+      return ["/entry.edn", "--fragment", fragmentId, "--gateway", gateway]
     }
   })();
 

@@ -85,19 +85,19 @@
   (Take "target")
   (Log "target")
 
-  ; template metadata request
+  ; fragment metadata request
   (| (Regex.Match #"\/\?ch=(\w+)&t=(\w+)&m=(\w+)&i=(\w+)&ib=(\w+)&mb=(\w+)") >= .match
      (Count .match)
      (When
       (Is 7)
       (->
-       (Msg "template")
+       (Msg "fragment")
 
        (cached-request
         (->
          .match
          (set-rpc-server)
-         (| (Take 2) (HexToBytes) (ToBase58) = .templateId)
+         (| (Take 2) (HexToBytes) (ToBase58) = .fragmentId)
          (| (Take 3) (HexToBytes) (ToBase58) = .mutableHash)
          (| (Take 4) = .includeCost (BigInt) (BigInt.ToString) = .includeCostString)
          (| (Take 5) = .iblock)
@@ -110,7 +110,7 @@
           (->
            ; the mutable data is within the full upload
            {"block-number" .iblock
-            "frag-hash" .templateId
+            "frag-hash" .fragmentId
             "expected-to" fragments} (Log) (Do fetch-block-data-upload) (Take 1))
           (->
            ; the mutable data is within update
@@ -122,7 +122,7 @@
          ; build image url
          img-server >= .imageUrl
          ; we cache by hash images on the image server
-         [.templateId .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
+         [.fragmentId .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
 
          ; build both normal and embedded player
          play-server >= .extUrl
@@ -132,7 +132,7 @@
          "?ch=" (AppendTo .extUrl) (AppendTo .animUrl)
          .chainIdString (AppendTo .extUrl) (AppendTo .animUrl)
          "&t=" (AppendTo .extUrl) (AppendTo .animUrl)
-         .templateId (AppendTo .extUrl) (AppendTo .animUrl)
+         .fragmentId (AppendTo .extUrl) (AppendTo .animUrl)
          "&w=" (AppendTo .extUrl)
          .mdata (Take "w") (ExpectInt) (ToString) (AppendTo .extUrl)
          "&h=" (AppendTo .extUrl)
@@ -141,9 +141,9 @@
          ; build name
          .mdata (Take "t") (ExpectString) >= .name
          " [" (AppendTo .name)
-         .templateId (Slice :To 4) (AppendTo .name)
+         .fragmentId (Slice :To 4) (AppendTo .name)
          ".." (AppendTo .name)
-         .templateId (Slice :From -2) (AppendTo .name)
+         .fragmentId (Slice :From -2) (AppendTo .name)
          "]" (AppendTo .name)
 
          ; include cost attribute
@@ -221,7 +221,7 @@
          ; build name
          .mdata (Take "t") (ExpectString) >= .name
 
-         (Clear .attribs) ; defined above in template / same type
+         (Clear .attribs) ; defined above in fragment / same type
 
          (find-attributes)
 

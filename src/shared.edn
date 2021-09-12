@@ -20,7 +20,7 @@
 (def entity-call-mint (read-var (run-chain call-hash "mint(bytes,bytes,uint96)")))
 (def entity-call-bid (read-var (run-chain call-hash "bid(bytes,bytes)")))
 
-; template eth_getBlockByNumber call
+; fragment eth_getBlockByNumber call
 (if (get _parameters :metamask)
   (defn __eth-get-block-by-number [block-number _server]
     (->
@@ -42,7 +42,7 @@
                 :Headers {"Content-Type" "application/json"}) (FromJson)
      (ExpectTable) (Take "result") (ExpectTable) (Take "transactions") (ExpectSeq))))
 
-; template eth_call
+; fragment eth_call
 (if (get _parameters :metamask)
   (defn __eth-call [to data _server]
     (->
@@ -61,7 +61,7 @@
                    :Headers {"Content-Type" "application/json"}) (FromJson)
         (ExpectTable) (Take "result") (ExpectString))))
 
-; template for block data fetching
+; fragment for block data fetching
 (defn __fetch-block-data [logic server]
   (-> (| (Take "block-number") = .block-number)
       (| (Take "frag-hash") = .frag-hash)
@@ -77,7 +77,7 @@
                      (-> (Maybe logic)))))
       .result))
 
-; eth block fetcher - to fetch call datas of fragment template upload calls
+; eth block fetcher - to fetch call datas of fragment fragment upload calls
 (defchain fetch-block-data-upload
   (__fetch-block-data
    (-> .input (ExpectString) (Slice :From 10)
@@ -91,7 +91,7 @@
                                  (Return))))
    .current-rpc-server))
 
-; eth block fetcher - to fetch call datas of fragment template update calls
+; eth block fetcher - to fetch call datas of fragment fragment update calls
 (defchain fetch-block-data-update
   (__fetch-block-data
    (-> .input (ExpectString) (Slice :From 10)
@@ -139,7 +139,7 @@
 ; utility function to load from chain or cache fragments
 (defn __frag-load-cached [hash]
   (->
-   hash = .b58-template-hash ; used in a shared path with entity loading
+   hash = .b58-fragment-hash ; used in a shared path with entity loading
    ; TODO, check isReferencedBy
    (Maybe
     (->
@@ -215,7 +215,7 @@
                            (Any [".s" ".v"]) ; avoid main script and version
                            (Maybe (->
                                    .file (Take 1) (ExpectBytes) = .file-data
-                                   .b58-template-hash (AppendTo .file-name)
+                                   .b58-fragment-hash (AppendTo .file-name)
                                    .file-name (Hash.Keccak-256) (ToBase58) > .file-name
                                    "cache/fs/" (PrependTo .file-name)
                                    .file-name (FS.Write .file-data))))))
@@ -245,12 +245,12 @@
 
 (defn __entity-load-cached [contract id]
   (->
-   "" >= .b58-template-hash
+   "" >= .b58-fragment-hash
    (Maybe
     (->
      (ReadFile (str "cache/entity/" contract "-" id))
      (ExpectBytesSeq)
-     (| (Take 2) (ToBase58) > .b58-template-hash))
+     (| (Take 2) (ToBase58) > .b58-fragment-hash))
     (-> 
      contract (FromBase58) (ToHex) = .contract-address
      ; download worst case scenario
@@ -261,18 +261,18 @@
      (Eth.DecodeCall entity-abi "getLibrary")
      (Take 0) (ExpectString) (Assert.Is fragments true)
 
-     ; fetch template hash
-     [] (Eth.EncodeCall entity-abi "getTemplate") (ToHex) > .callData
+     ; fetch fragment hash
+     [] (Eth.EncodeCall entity-abi "getFragment") (ToHex) > .callData
      (__eth-call .contract-address .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall entity-abi "getTemplate")
-     (Take 0) (ExpectBytes) >= .template-hash (Slice :From 12) > .template-hash (ToBase58) > .b58-template-hash
-     [.template-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
+     (Eth.DecodeCall entity-abi "getFragment")
+     (Take 0) (ExpectBytes) >= .fragment-hash (Slice :From 12) > .fragment-hash (ToBase58) > .b58-fragment-hash
+     [.fragment-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
      (__eth-call fragments .callData (get _parameters :gatewayURL))
      (Eth.DecodeCall frag-abi "dataOf")
      (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
      ; fetch block with immutable data
      {"block-number" .immutable-block
-      "frag-hash" .b58-template-hash
+      "frag-hash" .b58-fragment-hash
       "expected-to" fragments} (Do fetch-block-data-upload) >= .first-result
 
      ; NFT actual data associated with id
@@ -286,6 +286,6 @@
       "frag-hash" .env-hash
       "expected-to" .contract-address} (Do fetch-block-data-entity) (Take 0) = .entity-data
      [1 .entity-data] (Assoc .first-result)
-     .template-hash (Push .first-result :Clear false)
+     .fragment-hash (Push .first-result :Clear false)
      .first-result (WriteFile (str "cache/entity/" contract "-" id) :Flush true))
     :Silent true)))

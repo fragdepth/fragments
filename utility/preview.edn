@@ -1,14 +1,14 @@
 ; customize those values under
 
-(def name "My Template")
+(def name "My Fragment")
 (def creator "fragcolor.com")
-(def description "A template for a new fragment")
+(def description "A fragment for a new fragment")
 (def fid "2RnwVJWcUudQAscTVwY4EN7o8gfq")
 (def image "test.png")
 
 ; No changes from now on!
 
-(def svg-base (slurp "TemplateCard.svg"))
+(def svg-base (slurp "FragmentCard.svg"))
 
 (defchain make-svg
   image (FS.Read :Bytes true) (ToBase64) = .b64-png-image

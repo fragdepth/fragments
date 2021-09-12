@@ -301,7 +301,7 @@
                ; hooks
               ["Shader" ; minimize shaders
                (->
-                 ; shaders might be complex and templated/macro etc
+                 ; shaders might be complex and fragmentd/macro etc
                  ; so just try if this works, if not pass the original
                 = .sparams
                 (Maybe
