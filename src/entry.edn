@@ -211,6 +211,10 @@
   (Chain
    "Main" :Looped :LStack ; notice large stack size
 
+   (Setup
+    ; a flag we use later to hide loading screens
+    false >= .first-load)
+
    ; Load a fragment from ethereum directly if the command line argument is given
    (if (contains? _args "--fragment")
      (Setup
@@ -371,14 +375,22 @@
                   ;;  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)
                    ))
              (Count .compressed-bytes) (Log "compressed source size")
-             (Count .compressed-env) (Log "compressed env size"))))))
+             (Count .compressed-env) (Log "compressed env size")))))
+              ; flag first load
+        true > .first-load)
       ;;  :OnError
       ;;  (-> ; unlock the next update
       ;;   "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval))
        )
       ; if chain fails pause a bit
       (->
-       (Pause 2.0)))))))
+       (Pause 2.0)))
+     .first-load
+     (When
+      (Is true)
+      (->
+       (Setup
+        "globalThis.chainblocks.firstFrameDone()" (_Emscripten.Eval))))))))
 
 (if (= platform "emscripten")
   (do

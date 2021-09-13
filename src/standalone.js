@@ -1,5 +1,16 @@
 window.chainblocks = {
   singleThreadMode: false,
+  firstFrameDone: function () {
+    var loadingPage = document.getElementById('loading');
+    if (loadingPage !== null) {
+      loadingPage.style.visibility = 'hidden';
+    }
+
+    var loadingPlayerPage = document.getElementById('loading_player_page');
+    if (loadingPlayerPage !== null) {
+      loadingPlayerPage.style.visibility = 'hidden';
+    }
+  }
 };
 
 function vrFrame(_time, frame) {
@@ -234,22 +245,7 @@ async function reloadCBL() {
         if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
         if (text.includes("ERROR")) {
           console.error(text);
-        } else if (text.includes("Successfully")){
-          console.log('----finished downloading the nft----');
-          // hide the loading page after the nft is loaded for 1s, in case it wasn't fully loaded yet
-          setTimeout(function() {
-            var loadingPage = document.getElementById('loading');
-            if(loadingPage !== null) {
-              loadingPage.style.visibility = 'hidden';
-            }
-
-            var loadingPlayerPage = document.getElementById('loading_player_page');
-            if(loadingPlayerPage !== null) {
-              loadingPlayerPage.style.visibility = 'hidden';
-            }
-          }, 1000); 
-        }
-        else {
+        } else {
           console.info(text);
         }
       };
