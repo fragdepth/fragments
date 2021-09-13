@@ -1,3 +1,6 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
 ; this whole script is injected inside the hot-reload scripting environment
 
 ; read and eval environment

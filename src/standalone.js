@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright © 2021 Fragcolor Pte. Ltd.
+
 window.chainblocks = {
   singleThreadMode: false,
 };
