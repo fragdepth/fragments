@@ -16,6 +16,7 @@ src/cbl-mt.worker.js
 src/cbl-st.js
 src/cbl-st.wasm
 src/user
+src/CBlocks
 .DS_Store
 utility/*.png
 utility/preview.svg
