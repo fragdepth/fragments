@@ -10,6 +10,9 @@ window.chainblocks = {
     if (loadingPlayerPage !== null) {
       loadingPlayerPage.style.visibility = 'hidden';
     }
+  },
+  errorDetected: function () {
+    // TODO display error image
   }
 };
 

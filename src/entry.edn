@@ -378,10 +378,10 @@
              (Count .compressed-env) (Log "compressed env size")))))
               ; flag first load
         true > .first-load)
-      ;;  :OnError
-      ;;  (-> ; unlock the next update
-      ;;   "globalThis.chainblocks.unlockCode()" (_Emscripten.Eval))
-       )
+       :OnError
+       (->
+        ; display some error feedback
+        "globalThis.chainblocks.errorDetected()" (_Emscripten.Eval)))
       ; if chain fails pause a bit
       (->
        (Pause 2.0)))
