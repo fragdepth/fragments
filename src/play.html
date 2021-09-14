@@ -71,12 +71,42 @@
       }
     }
 
+    #something-went-wrong-div {
+      width: 100%;
+      height: 100%;
+      visibility: hidden;
+      z-index: 100;
+      background-color: white;
+      position: fixed;
+    }
+
+    #something-went-wrong-image {
+      width: 35vw;
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    @media screen and (max-width: 450px) {
+      #something-went-wrong-image {
+        width: 85vw !important;
+      }
+    }
+
   </style>
 </head>
 
 <body>
   <div id="loading_player_page">
     <img id="loading-image_player_page" src="assets/FgLoadingAPNG.png" alt="Loading..." />
+  </div>
+  <div id="something-went-wrong-div">
+    <img id="something-went-wrong-image" src="assets/ErrorImage.png" alt="Something went wrong..." />
   </div>
   <div class="canvas-div">
     <div id="canvas-holder" style="height: 100%;"></div>

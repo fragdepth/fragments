@@ -13,6 +13,10 @@ window.chainblocks = {
   },
   errorDetected: function () {
     // TODO display error image
+    var errorPage = document.getElementById('something-went-wrong');
+    if (errorPage !== null) {
+      errorPage.style.visibility = 'visible';
+    }
   }
 };
 
