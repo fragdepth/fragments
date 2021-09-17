@@ -1,0 +1,83 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+(def _args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
+
+; parameters
+(def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+(def include-cost uint256-max) ; uint256 max - don't allow inclusion
+(def entity-amount 1)
+(def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
+(def runtime "QmQRRM5c7uQaPMYG3XEWDzVbPawuLc3c4ZoFHm92GAWMk5")
+
+; contracts abis
+(def fragment-abi (slurp "../src/Fragment.json"))
+(def entity-abi (slurp "../src/Entity.json"))
+
+; file minting environment
+(def file-env {"e" "" ; environment 
+               "t" "svg" ; tags
+               })
+
+(defnode main)
+
+(defn metamask-call [dest call]
+  (->
+   (str "await ethereum.request({method: 'eth_sendTransaction', params: [{from: ethereum.selectedAddress, to: \"" dest "\", data: \"") (PrependTo call)
+   "\"}]})" (AppendTo call) call))
+
+(if (empty? *command-line-args*)
+  (do
+    ; code/script, use working directory artifacts
+    (defchain fragment-minter
+      "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
+      "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      include-cost (BigInt) (BigInt.ToBytes) = .includeCost
+      [.immutableData .mutableData [] .includeCost]
+      (Eth.EncodeCall fragment-abi "upload")
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "upload-fragment"))
+
+    (defchain entity-minter
+      "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
+      entity-amount (BigInt) (BigInt.ToBytes) = .entityAmount
+      [.mutableData .entityAmount]
+      (Eth.EncodeCall entity-abi "upload")
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "upload-entity"))
+
+    (defchain runtime-setter
+      runtime (FromBase58) (Slice :From 2) (Log) = .runtime
+      [.runtime]
+      (Eth.EncodeCall fragment-abi "setIpfsRuntime")
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "setIpfsRuntime-fragment"))
+
+    (schedule main fragment-minter)
+    (schedule main entity-minter)
+    (schedule main runtime-setter))
+  (do
+    ; file passed as argument
+    (defchain store-file
+      (first *command-line-args*) = .file-name (FS.Read :Bytes true) = .file-data
+      ; serialize in our format
+      .file-data (Set .fs .file-name) ; organize in a table
+      .fs (ToBytes) (Brotli.Compress :Quality 11) = .immutableData >> .cachedData
+      (Hash.Keccak-256) (Slice :From 12) (ToBase58) (Log "hash") = .frag-hash
+      ; we still use artifact env
+      file-env (ToBytes) (Brotli.Compress :Quality 11) = .mutableData >> .cachedData
+      include-cost (BigInt) (BigInt.ToBytes) = .includeCost
+      [.immutableData .mutableData [] .includeCost]
+      (Eth.EncodeCall fragment-abi "upload")
+      (Log)
+      (ToHex) (Log "Call Input")
+      "../src/cache/frag/" >= .filename
+      .frag-hash (AppendTo .filename)
+      {"data" .cachedData "owner" "0x0000000000000000000000000000000000000000"} (WriteFile .filename))
+
+    (schedule main store-file)))
+
+(run main)

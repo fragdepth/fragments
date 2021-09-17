@@ -1,0 +1,86 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+; edit those
+
+(def chainId 4) ; rinkeby
+(def fragmentId "45XkDw38X9Wq5CmcCaCT8hg25VW1")
+(def max-amount 1)
+(def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
+
+; stop editing
+
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+(def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
+
+(defnode Root)
+
+(defn sign []
+  (->
+   private-key-base (Hash.Keccak-256) = .private-key
+   .payload (Hash.Keccak-256) = .message-hash
+   "0x19" (HexToBytes) >= .message
+   "Ethereum Signed Message:\n32" (StringToBytes) (AppendTo .message)
+   .message-hash (AppendTo .message)
+   .message (Hash.Keccak-256) (ECDSA.Sign .private-key) = .signature
+   (Take 0) >= .signaturePayload
+   27 (BigInt) = .b27
+   .signature (Take 1) (BigInt) (BigInt.Add .b27) (BigInt.ToBytes :Bits 8) (AppendTo .signaturePayload)
+   .signaturePayload (ToHex)))
+
+(defn custom-logic []
+  (->
+   ; add custom evaluation logic here from user passed params json, accessing .data
+   ; as well as add parameters and attributes here
+   {} (Set .environment "a") ; attributes for OpenSea and such
+   "Description X" (Set .environment "d") ; description
+   "Entity Name X" (Set .environment "t") ; name/window title
+   512 (Set .environment "w") ; width
+   512 (Set .environment "h") ; height
+   "" (EDN.Uglify) (Set .environment "e") ; custom code
+   .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex)))
+
+(defloop handler ; must be loop!
+  (Http.Read) = .request
+  (Take "target") = .target
+  (Log "target")
+  (Match ["/mint"
+          (->
+           .request (Take "body") (FromJson) (ExpectTable) = .data
+
+           .data (Take "amount") (ExpectInt) = .amount
+           ; don't allow more than max amount
+           (When (IsMore max-amount) (-> (Restart)))
+
+           ; prepare bytes payload for signature
+           (Clear .result)
+           .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
+           chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
+           fragmentId (FromBase58) (AppendTo .payload)
+           (custom-logic) >> .result (HexToBytes) (AppendTo .payload)
+           .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
+
+           (sign) >> .result
+           .result (ToJson) (Http.Response))
+
+          "/bid"
+          (->
+           .request (Take "body") (FromJson) (ExpectTable) = .data
+
+           ; prepare bytes payload for signature
+           (Clear .result)
+           .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
+           chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
+           fragmentId (FromBase58) (AppendTo .payload)
+           (custom-logic) >> .result (HexToBytes) (AppendTo .payload)
+
+           (sign) >> .result
+           .result (ToJson) (Http.Response))
+
+          nil (-> (Restart))]))
+
+(defloop main
+  (Http.Server handler :Port port))
+
+(schedule Root main)
+(run Root 0.1)

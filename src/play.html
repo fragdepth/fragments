@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+
+<head>
+  <script src="standalone.js" async="true" onload="_start()"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1"> 
+  <style type="text/css">
+    html {
+      height: 100%;
+    }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    canvas {
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 10%;
+      left: 0;
+      right: 0;
+    }
+
+    .canvas-div {
+      height: 50vh;
+      width: 50vw;
+    }
+
+    .canvas-description {
+      top: 65%;
+      display: block;
+      position: absolute;
+      left: 0;
+      right: 0;
+      margin: auto;
+      width: 60%;
+      text-align: center;
+    }
+    
+    #loading_player_page {
+      position: fixed;
+      display: block;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      text-align: center;
+      background-color: black;
+      z-index: 99;
+    }
+
+    #loading-image_player_page {
+      width: 25vw;
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    @media screen and (max-width: 600px) {
+      #loading-image_player_page {
+        width: 70vw;
+      }
+    }
+
+    #something-went-wrong-div {
+      width: 100%;
+      height: 100%;
+      visibility: hidden;
+      z-index: 100;
+      background-color: white;
+      position: fixed;
+    }
+
+    #something-went-wrong-image {
+      width: 35vw;
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    @media screen and (max-width: 450px) {
+      #something-went-wrong-image {
+        width: 85vw !important;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="loading_player_page">
+    <img id="loading-image_player_page" src="assets/FgLoadingAPNG.png" alt="Loading..." />
+  </div>
+  <div id="something-went-wrong-div">
+    <img id="something-went-wrong-image" src="assets/ErrorImage.png" alt="Something went wrong..." />
+  </div>
+  <div class="canvas-div">
+    <div id="canvas-holder" style="height: 100%;"></div>
+  </div>
+  <div class="canvas-description">
+    <div id="nft-title"><span><b> nft-title placeholder</b> </span></div>
+    <div id="nft-id"><span>nft-id placeholder</span></div>
+    <div id="nft-creator"><span>nft-creator placeholder</span></div>
+    <div id="nft-description">
+      <p>nft-description placeholder, nft-description placeholder, nft-description placeholder.</p>
+    </div>
+    <div id="nft-random">
+      <p>nft-random placeholder,nft-random placeholder,nft-random placeholder,nft-random placeholder,nft-random
+        placeholder.</p>
+    </div>
+  </div>
+
+</body>
+
+</html>

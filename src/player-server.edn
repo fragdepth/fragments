@@ -1,0 +1,38 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+; script self-host web version
+
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+
+; need those for multi-threading wasm
+(def headers-self {"Cross-Origin-Opener-Policy" "same-origin"
+                   "Cross-Origin-Embedder-Policy" "require-corp"})
+; need those for OpenSea and in general iframes
+(def headers-embed {"X-Frame-Options" ""
+                    "Access-Control-Allow-Origin" "*"})
+
+(def headers (if (contains? _args "--embed") (if (read-string (get _args "--embed")) headers-embed headers-self) headers-self))
+(def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
+
+(println headers)
+
+(defnode Root)
+
+(defloop handler ; must be loop!
+  (Http.Read) = .request
+  (Take "target") >= .target
+
+  ; filter out query params
+  (Regex.Search #"(.*)\?") = .matches
+  (Count .matches) (When (Is 2) (-> .matches (Take 1) > .target))
+
+  .target (Log "target")
+  (Match ["/" (-> "/index.html" (Http.SendFile headers))
+          nil (-> .target (Http.SendFile headers))]))
+
+(defloop main
+  (Http.Server handler :Port port))
+
+(schedule Root main)
+(run Root 0.1)

@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+
+<head>
+  <script src="standalone.js" async="true" onload="_start()"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1"> 
+  <style type="text/css">
+    html {
+      height: 100%;
+    }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    canvas {
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    .canvas-div{
+      height:100vh;
+      width: 100vw;
+    }
+
+    #loading {
+      position: fixed;
+      display: block;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      text-align: center;
+      background-color: black;
+      z-index: 99;
+    }
+
+    #something-went-wrong-div {
+      width: 100%;
+      height: 100%;
+      visibility: hidden;
+      z-index: 100;
+      background-color: white;
+      position: fixed;
+    }
+
+    #loading-image {
+      width: 35vw;
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+
+    #something-went-wrong-image {
+      width: 40vw;
+      padding: 0;
+      margin: auto;
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+
+    @media screen and (max-width: 450px) {
+      #loading-image {
+        width: 70vw !important;
+      }
+    }
+
+    @media screen and (max-width: 450px) {
+      #something-went-wrong-image {
+        width: 85vw !important;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="loading">
+    <img id="loading-image" src="assets/FgLoadingAPNG.png" alt="Loading..." />
+  </div>
+
+  <div id="something-went-wrong-div">
+    <img id="something-went-wrong-image" src="assets/ErrorImage.png" alt="Something went wrong..." />
+  </div>
+
+  <div class="canvas-div">
+    <div id="canvas-holder" style="height: 100%; width:100%;"></div>
+  </div>
+
+</body>
+
+</html>

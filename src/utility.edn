@@ -1,0 +1,224 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+; this whole script is injected inside the hot-reload scripting environment
+
+; read and eval environment
+(try*
+ (eval (read-string (str "(do " (slurp (if (or (contains? _args "--fragment") (and (contains? _args "--entity") (contains? _args "--entity-id")))
+                                         (str tmp-folder "mutable.tmp.edn")
+                                         (str base-folder (get _parameters :mutable)))) "nil)")))
+ (catch* err (prn (str "Failed to load environment with error: " err))))
+
+; setup some constants - run afer env to overwrite and force them in
+(def Canvas-Width (get _parameters :windowWidth))
+(def Canvas-Height (get _parameters :windowHeight))
+(def XR? (get _parameters :xrSupported))
+(def identity identity)
+
+; utility to crypto verify bytes
+(defn verify-bytes-hash [type kkhash]
+  (if (not (nil? (first kkhash)))
+    (->
+     (Hash.Keccak-256)
+                ; take 20 bytes like ETH
+     (ToHex) (Slice :From 26) >= .res
+     "0x" (PrependTo .res) .res
+     (When (IsNot (first kkhash))
+           (-> (Log "Wrong hash")
+               (str type " crypto-hash verification failed")
+               (Fail))))))
+
+; ipfs loader to embedded inside scripts
+(defn load-ipfs [hash & kkhash]
+  (let [node (Node)
+        chain (Chain "downloader"
+                                ; this is text code
+                     nil (Http.Get (str ipfs-gateway "/ipfs/" hash) :Timeout 60) (FromJson) (ExpectTable) = .json
+                     .json (Take "code") (ExpectString) >= .source-code
+                     (verify-bytes-hash "IPFS Script" kkhash)
+                                ; ignore environment
+                     "(chainify [" (PrependTo .source-code)
+                     "])" (AppendTo .source-code)
+                     .source-code)
+        code (pr-str (do
+                       (schedule node chain)
+                       (run node 0.1)
+                       ; stop returns the text code
+                       (stop chain)))]
+    (eval (read-string code))))
+
+; shader compiler runner utility
+(defn __make-shader []
+  (let [shaderc
+        (fn [varying code type]
+          (->
+           varying (Set "shaderc-table" "varyings")
+           code (Set "shaderc-table" "shader_code")
+           (Clear .params)
+           "-f" >> .params
+           "shaders/tmp/shader.txt"  >> .params
+           "-o" >> .params
+           "shaders/tmp/shader.bin" >> .params
+           "--varyingdef" >> .params
+           "shaders/tmp/varying.txt" >> .params
+           "--platform" >> .params
+           "asm.js" >> .params
+           "-p" >> .params
+           "300_es" >> .params
+           "--type" >> .params
+           type >> .params
+           "-i" >> .params
+           "shaders/include" >> .params
+           .params (Set "shaderc-table" "params")
+           "globalThis.chainblocks.compileShaderFromObject(" > .js
+           .shaderc-table (ToJson) (AppendTo .js)
+           ")" (AppendTo .js)
+           .js (_Emscripten.EvalAsync)
+           (FromJson) (ExpectTable) > .json-output
+           (Maybe (-> (Take "bytecode")
+                      (ExpectIntSeq)
+                      (IntsToBytes))
+                  (-> (Take "stdout")
+                      (ExpectString) = .stdout
+                      (Count .stdout) (WhenNot (Is 0) (-> .stdout (Log)))
+                      .json-output
+                      (Take "stderr")
+                      (ExpectString) = .stderr
+                      (Count .stderr) (WhenNot (Is 0) (-> .stderr (Log)))
+                      "Shader compilation failed" (Fail))
+                  :Silent true)))]
+    (Chain
+     "shader-compiler"
+     (Input) (Take 0) >= .varying
+     (Input) (Take 1) >= .vs-code
+     (Input) (Take 2) >= .fs-code
+     "" >= .js ; avoid warning caused by shaderc
+     {} >= .json-output ; avoid warning caused by shaderc
+     (shaderc .varying .vs-code "v") = .vs-bytes
+     (shaderc .varying .fs-code "f") = .fs-bytes
+     (GFX.Shader :VertexShader .vs-bytes :PixelShader .fs-bytes))))
+
+; this is used only inside ExpectLike blocks as an example output type
+(defchain __downloader-chain-fragment
+  nil (Http.Get ""
+                :Bytes true
+                :FullResponse true
+                :Timeout 60))
+(prepare __downloader-chain-fragment)
+
+(defn __ipfs-load-cached [hash full]
+  (->
+   (Maybe (->
+           (ReadFile (str "cache/ipfs/" hash (if full "F" "B")))
+           (if full 
+             (ExpectLike __downloader-chain-fragment :Unsafe true)
+             (ExpectBytes)))
+          (-> ; download worst case scenario
+           hash (Log "Downloading from ipfs")
+           nil (Http.Get (str ipfs-gateway "/ipfs/" hash)
+                         :Bytes true
+                         :FullResponse full
+                         :Timeout 60)
+           (WriteFile (str "cache/ipfs/" hash (if full "F" "B")) :Flush true))
+          :Silent true)))
+
+(defn __ar-load-cached [tx full]
+  (->
+   (Maybe (->
+           (ReadFile (str "cache/ar/" tx (if full "F" "B")))
+           (if full
+             (ExpectLike __downloader-chain-fragment :Unsafe true)
+             (ExpectBytes)))
+          (-> ; download worst case scenario
+           tx (Log "Downloading from arweave")
+           nil (Http.Get (str ar-gateway "/" tx)
+                         :Bytes true
+                         :FullResponse full
+                         :Timeout 60)
+           (WriteFile (str "cache/ar/" tx (if full "F" "B")) :Flush true))
+          :Silent true)))
+
+(defmacro! ar (fn* [tx] ['__ar-load-cached tx]))
+(defmacro! ipfs (fn* [cid] ['__ipfs-load-cached cid]))
+
+; utility bytes fetcher from ipfs or arweave with optional full payload (headers, status etc)
+(defn fetch [file & full]
+  (let [dl-func (first file)
+        hash (nth file 1)]
+    (dl-func hash (if (empty? full) false (first full)))))
+
+(if (= platform "emscripten")
+             ; emscripten shader compiler
+  (defn Shader [name varying vs-code fs-code]
+    (let [hash (str name "-hash")
+          shader (str name "-shader")
+          sc (__make-shader)
+          loader (Chain (str name "-compiler")
+                        varying >> .Shader-args
+                        vs-code >> .Shader-args
+                        fs-code >> .Shader-args
+                        .Shader-args (Hash) >= .shader-hash
+                        (Get .shaders-cache hash :Default 0)
+                        (If (IsNot .shader-hash)
+                            (-> (Msg (str "compiling shader " name))
+                                .Shader-args (Do sc)
+                                           ; cache the shader as well
+                                (Set .shaders-cache shader))
+                            (-> (Get .shaders-cache shader)
+                                (ExpectLike sc))) = .shader
+                        .shader-hash (Set .shaders-cache hash)
+                        .shader)]
+                 ; replace with detach and wait when we can share context
+                 ; in order to allow chain cleanup
+      (Setup (Do loader) = name)))
+             ; native platforms shader compiler
+  (defn Shader [name varying vs-code fs-code]
+    (Setup
+     {"varyings" varying "code" vs-code "defines" [""]}
+     (GFX.CompileShader ShaderType.Vertex) = .vs-bytes
+     {"varyings" varying "code" fs-code "defines" [""]}
+     (GFX.CompileShader ShaderType.Pixel) = .fs-bytes
+     (GFX.Shader :VertexShader .vs-bytes :PixelShader .fs-bytes) = name)))
+
+           ; model loader from the ipfs
+(defn Model [name file & kkhash]
+  (let [dl-func (first file)
+        hash (nth file 1)
+        loader (Chain (str name "-loader")
+                      (dl-func hash false) = .model-data
+                      (verify-bytes-hash "Model" kkhash)
+                      (str tmp-folder ".gltf-model.glb") 
+                      (FS.Write .model-data :Overwrite true)
+                      (GLTF.Load))]
+               ; replace with detach and wait when we can share context
+               ; in order to allow chain cleanup
+    (Setup (Do loader) = name)))
+           ; texture loader from the ipfs
+(defn Texture [name file & kkhash]
+  (let [dl-func (first file)
+        hash (nth file 1)
+        loader (Chain (str name "-loader")
+                      (dl-func hash true)
+                      (| (Take "body") (ExpectBytes) = .texture-data
+                         (verify-bytes-hash "Texture" kkhash))
+                      (Take "headers") (ExpectTable) (Take "content-type") (ExpectString)
+                      (Match (vector "image/png" (-> ".texture.png")
+                                     "image/jpeg" (-> ".texture.jpg")
+                                     nil (-> "Image format not supported"
+                                             (Fail)))
+                             :Passthrough false) = .texture-name
+                      (FS.Write .texture-data :Overwrite true)
+                      (LoadImage .texture-name) (GFX.Texture2D))]
+               ; replace with detach and wait when we can share context
+               ; in order to allow chain cleanup
+    (Setup (Do loader) = name)))
+
+(defn _decode-base64 []
+  (-> (Replace ["-" "_"] ["+" "/"]) >= .b64
+      (Count .b64) (Math.Mod 4)
+      (Match
+       [2 (-> "==" (AppendTo .b64))
+        3 (-> "=" (AppendTo .b64))
+        nil nil])
+      .b64 (FromBase64)))
