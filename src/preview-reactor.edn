@@ -38,11 +38,18 @@
   (ExpectString) = .requestedId
   "entry.edn" >> .args
   "--entity" >> .args
-  entity-contract (HexToBytes) (ToBase58) >> .args
+  entity-contract (HexToBytes) (ToBase58) >> .args >= .cname
   "--entityId" >> .args
   .requestedId >> .args
   "--gateway" >> .args
   node-http >> .args
+  "--screenshot" >> .args
+  "-" (AppendTo .cname)
+  .requestedId (AppendTo .cname)
+  ".png" (AppendTo .cname)
+  .cname >> .args
+  "--screenshotDelay" >> .args
+  "1.0" >> .args
   "" (Process.Run cbl .args :Timeout 20))
 
 (defloop tx-scraper
@@ -72,6 +79,10 @@
           ; let's give ourself a small pause to avoid flooding the node
           (Pause 2.0))))
 
+(defchain test
+  "1" (Spawn produce-screenshot))
+
+;; (schedule main test)
 (schedule main events-listener)
 (schedule main tx-scraper)
 
