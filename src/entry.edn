@@ -22,7 +22,9 @@
                   :xrSupported (if (contains? _args "--xrSupported") (read-string (get _args "--xrSupported")) false)
                   :metamask (if (contains? _args "--metamask") (read-string (get _args "--metamask")) false)
                   :attributes (if (contains? _args "--attributes") (read-string (get _args "--attributes")) {})
-                  :description (if (contains? _args "--description") (read-string (get _args "--description")) "")
+                  :description (if (contains? _args "--description") (get _args "--description") "")
+                  :screenshot (if (contains? _args "--screenshot") (get _args "--screenshot") nil)
+                  :screenshotDelay (if (contains? _args "--screenshotDelay") (read-string (get _args "--screenshotDelay")) 2.0)
                   :gatewayURL (if (contains? _args "--gateway") (get _args "--gateway") "https://cloudflare-eth.com")})
 
 (if (not (= platform "emscripten"))
@@ -207,6 +209,18 @@
   .cid (_Emscripten.Eval)
   "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval))
 
+(defn delayed-screenshot [name pause]
+  (defchain take-screenshot
+    (Pause pause)
+    (str tmp-folder "screenshot-" name) (GFX.Screenshot)
+    (Repeat
+     (->
+      (str tmp-folder "screenshot-" name)
+      (FS.IsFile) (When (Is true) (-> (Return)))
+      (Pause 1.0))
+     :Times 10)
+    0 (Exit)))
+
 (def Main
   (Chain
    "Main" :Looped :LStack ; notice large stack size
@@ -244,8 +258,8 @@
      (Setup
       (applyStyle))
      ; branch some tasks
-    ;;  (if (not (get _parameters :isSVG))
-    ;;    (Branch [screenshot-grab-upload video-upload]))
+     ;;  (if (not (get _parameters :isSVG))
+     ;;    (Branch [screenshot-grab-upload video-upload]))
      ; define out shader cache at this top level
      ; so to persist when user chain is reloaded
      (Table .shaders-cache)
@@ -354,26 +368,26 @@
              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
              .local-fragment (Set .frag-data "data")
              (get _parameters :owner) (Set .frag-data "owner")
-             (Sub (->
-                   (Await (->
-                           (str tmp-folder "live-chain-binary")
-                           (FS.Write .compressed-bytes :Overwrite true)
-                           (str tmp-folder "live-chain-env-binary")
-                           (FS.Write .compressed-env :Overwrite true)
-                           .compressed-bytes
-                           (Hash.Keccak-256)
-                            ; take 20 bytes like ETH
-                           (ToHex) (Slice :From 26) >= .eth-id
-                           "0x" (PrependTo .eth-id)
-                           .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
-                           (str tmp-folder "live-chain-eth-id")
-                           (FS.Write .b58-eth-id :Overwrite true)
-                            ; also cache locally in order to load it from other files!
-                           (str "cache/frag/") >= .cached-name
-                           .b58-eth-id (AppendTo .cached-name)
-                           .frag-data (WriteFile .cached-name :Flush true)))
+             (| (Await
+                 (->
+                  (str tmp-folder "live-chain-binary")
+                  (FS.Write .compressed-bytes :Overwrite true)
+                  (str tmp-folder "live-chain-env-binary")
+                  (FS.Write .compressed-env :Overwrite true)
+                  .compressed-bytes
+                  (Hash.Keccak-256)
+                  ; take 20 bytes like ETH
+                  (ToHex) (Slice :From 26) >= .eth-id
+                  "0x" (PrependTo .eth-id)
+                  .eth-id (HexToBytes) (ToBase58) = .b58-eth-id
+                  (str tmp-folder "live-chain-eth-id")
+                  (FS.Write .b58-eth-id :Overwrite true)
+                  ; also cache locally in order to load it from other files!
+                  (str "cache/frag/") >= .cached-name
+                  .b58-eth-id (AppendTo .cached-name)
+                  .frag-data (WriteFile .cached-name :Flush true)))
                   ;;  "globalThis.chainblocks.setCanUpload(true)" (_Emscripten.Eval)
-                   ))
+                )
              (Count .compressed-bytes) (Log "compressed source size")
              (Count .compressed-env) (Log "compressed env size")))))
               ; flag first load
@@ -390,7 +404,11 @@
       (Is true)
       (->
        (Setup
-        "globalThis.chainblocks.firstFrameDone()" (_Emscripten.Eval))))))))
+        "globalThis.chainblocks.firstFrameDone()" (_Emscripten.Eval))
+       ; this code runs when we really loaded after the first frame
+       (if (not (nil? (get _parameters :screenshot)))
+         (->
+          (Step (delayed-screenshot (get _parameters :screenshot) (get _parameters :screenshotDelay)))))))))))
 
 (if (= platform "emscripten")
   (do
