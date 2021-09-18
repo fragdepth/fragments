@@ -9,6 +9,9 @@
 (def node-ws "wss://rinkeby.infura.io/ws/v3/f1f1f88885f54de7955ce248e1d69046")
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 
+(def entity-contract "0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31")
+(def cbl "cbl")
+
 (defnode main)
 
 (defloop events-listener
@@ -19,7 +22,7 @@
     :Global true)
 
    (Eth node-ws) ; we need websockets to wait for events
-   (Eth.Contract :Contract "0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31"
+   (Eth.Contract :Contract entity-contract
                  :Abi (slurp "Entity.json")))
 
   (Eth.WaitEvent :Event "Upload")
@@ -30,6 +33,17 @@
      (| (Take 1) (BigInt) (BigInt.ToString) = .last))
   (Time.EpochMs) (Math.Add (* 120 1000)) = .time ; wait 2 mins to ensure finality/inclusion
   [[.tx-hash .first .last] .time] >> .events)
+
+(defchain produce-screenshot
+  (ExpectString) = .requestedId
+  "entry.edn" >> .args
+  "--entity" >> .args
+  entity-contract (HexToBytes) (ToBase58) >> .args
+  "--entityId" >> .args
+  .requestedId >> .args
+  "--gateway" >> .args
+  node-http >> .args
+  "" (Process.Run cbl .args :Timeout 20))
 
 (defloop tx-scraper
   (Setup
@@ -49,9 +63,14 @@
   (| (Take 2) = .last)
   (Maybe (->
           ; can be reordered!
+          ; and can also be not included so we do this check here to make sure it's a real one
           .tx-hash
           (Eth.Transaction)
-          (Log "Tx"))))
+          (Log "Tx")
+          ; from now on generate screenshot by spawning a new process
+          .first (Spawn produce-screenshot)
+          ; let's give ourself a small pause to avoid flooding the node
+          (Pause 2.0))))
 
 (schedule main events-listener)
 (schedule main tx-scraper)
