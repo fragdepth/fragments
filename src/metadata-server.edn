@@ -126,6 +126,7 @@
          img-server >= .imageUrl
          ; we cache by hash images on the image server
          [.fragmentId .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
+         ".png" (AppendTo .imageUrl)
 
          ; build both normal and embedded player
          play-server >= .extUrl
@@ -204,6 +205,7 @@
          img-server >= .imageUrl
          ; we cache by hash images on the image server
          [.entityId .entityContract .mutableHash] (Hash.Keccak-256) (ToBase58) (AppendTo .imageUrl)
+         ".png" (AppendTo .imageUrl)
 
           ; build both normal and embedded player
          play-server >= .extUrl

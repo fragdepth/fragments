@@ -212,10 +212,10 @@
 (defn delayed-screenshot [name pause]
   (defchain take-screenshot
     (Pause pause)
-    (str tmp-folder "screenshot-" name) (GFX.Screenshot)
+    (str tmp-folder name) (GFX.Screenshot)
     (Repeat
      (->
-      (str tmp-folder "screenshot-" name)
+      (str tmp-folder name)
       (FS.IsFile) (When (Is true) (-> (Return)))
       (Pause 1.0))
      :Times 10)

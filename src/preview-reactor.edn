@@ -10,7 +10,24 @@
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 
 (def entity-contract "0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31")
-(def cbl "cbl")
+
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+
+(def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")})
+
+(if (not (= platform "emscripten"))
+  (do
+    ; fix some incompatibilities with emscripten
+    (def _Emscripten.Eval Pass)
+    (def _Emscripten.EvalAsync Pass)))
+
+(def tmp-folder "tmp/")
+(def base-folder (str "user/" (get _parameters :rootFolder)))
+
+(def entity-abi (slurp (str "Entity.json")))
+(def frag-abi (slurp (str "Fragment.json")))
+
+(load-file (str "shared.edn"))
 
 (defnode main)
 
@@ -36,21 +53,29 @@
 
 (defchain produce-screenshot
   (ExpectString) = .requestedId
+
+  node-http = .current-rpc-server
+
+  .requestedId (BigInt) (BigInt.ToBytes) = .bid
+  [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) = .callData
+  (__eth-call entity-contract .callData node-http)
+  (Eth.DecodeCall entity-abi "getData")
+  (Take 0) (ExpectBytes) (ToBase58) = .env-hash
+
   "entry.edn" >> .args
   "--entity" >> .args
-  entity-contract (HexToBytes) (ToBase58) >> .args >= .cname
+  entity-contract (HexToBytes) (ToBase58) >> .args = .contractB58
   "--entityId" >> .args
   .requestedId >> .args
   "--gateway" >> .args
   node-http >> .args
   "--screenshot" >> .args
-  "-" (AppendTo .cname)
-  .requestedId (AppendTo .cname)
+  [.requestedId .contractB58 .env-hash] (Hash.Keccak-256) (ToBase58) >= .cname
   ".png" (AppendTo .cname)
   .cname >> .args
   "--screenshotDelay" >> .args
   "1.0" >> .args
-  "" (Process.Run cbl .args :Timeout 20))
+  "" (Process.Run *cbl* .args :Timeout 20))
 
 (defloop tx-scraper
   (Setup
