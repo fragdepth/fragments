@@ -13,8 +13,8 @@
 (def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
 
 ; contracts are deterministic so should be:
-; Entity: 0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31
-; Vault: 0x712720eEe33DA537980AdCf37Bb8fDfcf01B1B23
+; Entity: 0xF1001090C0BaC91fB66721999487a51b4Ce25Ca5
+; Vault: 0xF63E62f9e1cB77188490E9bBAB482d0169e345Aa
 
 ; contracts abis
 (def fragment-abi (slurp "../src/Fragment.json"))
@@ -31,7 +31,7 @@
   [.fragmentHash token-name token-symbol unique can-update .maxSupply]
   (Eth.EncodeCall fragment-abi "rez")
   (ToHex) >= .call
-  (metamask-call "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162" .call)
+  (metamask-call "0x878576534EA9C7ec24FcBf512C6f56d4ED1B9a56" .call)
   (Log "Call Input"))
 
 (defchain delegate

@@ -26,7 +26,7 @@
 (def rinkeby-rpc "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 (def goerli-rpc "https://goerli.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 
-(def fragments "0xC0DE7DD77E69d25A53fE05F8d3fe772654c29162")
+(def fragments "0x878576534EA9C7ec24FcBf512C6f56d4ED1B9a56")
 
 ; need those for multi-threading wasm
 (def headers {"Cross-Origin-Opener-Policy" "same-origin"

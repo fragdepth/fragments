@@ -7,7 +7,7 @@
   * Load a fragment: `./cbl  src/entry.edn --gateway "https://goerli.infura.io/v3/__MY_KEY__" --fragment "2mbXMts9sqVqPgdTj9ASoVRHN4GF"`
 
 ### cbl windows 64bit build here:
-https://cloudflare-ipfs.com/ipfs/QmSQaee7vrA1F6f6FNNthZkymP7qsHLARZNjP6i2RR4LeT?filename=cbl-win64.zip
+https://cloudflare-ipfs.com/ipfs/QmX9BTNybSHeHf8yVVwMNCrTCtPaeUfMeowUkgxAyyeTP1?filename=cbl-win64.zip
 
 ## How?
 
