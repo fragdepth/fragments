@@ -398,6 +398,8 @@
         "globalThis.chainblocks.errorDetected()" (_Emscripten.Eval)))
       ; if chain fails pause a bit
       (->
+       ; report error and pause
+       "globalThis.chainblocks.errorDetected()" (_Emscripten.Eval)
        (Pause 2.0)))
      .first-load
      (When

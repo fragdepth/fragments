@@ -166,10 +166,11 @@
      .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
                         (-> .first-result)
                         (->
+                         (Msg "Downloading updated environment")
                          .first-result (Take 0) >> .new-result
                          .hashBytes (Eth.EncodeCall frag-abi "mutableDataHashOf") (ToHex) > .callData
                          (__eth-call fragments .callData (get _parameters :gatewayURL))
-                         (Eth.DecodeCall frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) = .env-hash
+                         (Eth.DecodeCall frag-abi "mutableDataHashOf") (Take 0) (ExpectBytes) (ToBase58) = .env-hash
                          {"block-number" .mutable-block
                           "frag-hash" .env-hash
                           "expected-to" fragments} (Do fetch-block-data-update) (Take 0) >> .new-result
