@@ -395,10 +395,12 @@
        :OnError
        (->
         ; display some error feedback
+        (Msg "User chain failed.")
         "globalThis.chainblocks.errorDetected()" (_Emscripten.Eval)))
       ; if chain fails pause a bit
       (->
        ; report error and pause
+       (Msg "User chain failed.")
        "globalThis.chainblocks.errorDetected()" (_Emscripten.Eval)
        (Pause 2.0)))
      .first-load
