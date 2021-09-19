@@ -149,7 +149,7 @@
      ; TODO, decide how to flag cached content for update after a mutation happened
      (ReadFile (str "cache/frag/" hash))
      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
-    (-> 
+    (->
      ; download worst case scenario
      (get _parameters :gatewayURL) = .current-rpc-server
      hash (Log "Downloading")
@@ -189,10 +189,11 @@
          (Maybe (->
                  base-folder (PrependTo .file-name)
                  .file-name (FS.Read :Bytes bytes))
-                (-> hash (AppendTo .file-name)
-                    .file-name (Hash.Keccak-256) (ToBase58) > .file-name
-                    "cache/fs/" (PrependTo .file-name)
-                    .file-name (FS.Read :Bytes bytes))
+                (->
+                 hash (AppendTo .file-name)
+                 .file-name (Hash.Keccak-256) (ToBase58) > .file-name
+                 "cache/fs/" (PrependTo .file-name)
+                 .file-name (FS.Read :Bytes bytes))
                 :Silent true)))
 
 (def load-string-chain (load-file-chain "" false))
@@ -218,6 +219,7 @@
                            (Any [".s" ".v"]) ; avoid main script and version
                            (Maybe (->
                                    .file (Take 1) (ExpectBytes) = .file-data
+                                   ; append fragment has to name to make it unique
                                    .b58-fragment-hash (AppendTo .file-name)
                                    .file-name (Hash.Keccak-256) (ToBase58) > .file-name
                                    "cache/fs/" (PrependTo .file-name)
@@ -254,7 +256,7 @@
      (ReadFile (str "cache/entity/" contract "-" id))
      (ExpectBytesSeq)
      (| (Take 2) (ToBase58) > .b58-fragment-hash))
-    (-> 
+    (->
      contract (FromBase58) (ToHex) = .contract-address
      ; download worst case scenario
      (get _parameters :gatewayURL) = .current-rpc-server
