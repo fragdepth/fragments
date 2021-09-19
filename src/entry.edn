@@ -356,9 +356,9 @@
              ; enviruments are not hashed here, so we can add structured data
              ; the thing to keep in mind here is that we don't wanna depends on IPFS metadata AT ALL
              (if (not (empty? (keys (get _parameters :attributes))))
-               (get _parameters :attributes) (Set .environment "a"))
+               (-> (get _parameters :attributes) (Set .environment "a")))
              (if (not (= "" (get _parameters :description)))
-               (get _parameters :description) (Set .environment "d"))
+               (-> (get _parameters :description) (Set .environment "d")))
              (get _parameters :windowTitle) (Set .environment "t")
              (get _parameters :windowWidth) (Set .environment "w")
              (get _parameters :windowHeight) (Set .environment "h")
