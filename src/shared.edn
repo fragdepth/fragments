@@ -102,7 +102,7 @@
        (Eth.DecodeCall frag-abi "update" true)
        ; in theory Take 0 is the fragment hash but we could have multiple updates per block
        (| (Take 1) (ExpectBytes) = .mutableData)
-       .mutableData (Hash.Keccak-256) (Slice :From 12) (ToBase58)
+       .mutableData (Hash.Keccak-256) (ToBase58)
        (When (Is .frag-hash) (-> .mutableData >> .result
                                  (Return))))
    .current-rpc-server))

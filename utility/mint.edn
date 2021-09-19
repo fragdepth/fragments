@@ -37,7 +37,14 @@
       (Eth.EncodeCall fragment-abi "upload")
       (ToHex) >= .call
       (metamask-call fragments .call)
-      (Log "upload-fragment"))
+      (Log "upload-fragment")
+      ; update
+       "../src/tmp/live-chain-eth-id" (FS.Read :Bytes false) (FromBase58) = .immutableDataHash
+      [.immutableDataHash .mutableData .includeCost]
+      (Eth.EncodeCall fragment-abi "update")
+      (ToHex) >= .call
+      (metamask-call fragments .call)
+      (Log "update-fragment"))
 
     (defchain entity-minter
       "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
