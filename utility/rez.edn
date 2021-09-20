@@ -31,7 +31,7 @@
   [.fragmentHash token-name token-symbol unique can-update .maxSupply]
   (Eth.EncodeCall fragment-abi "rez")
   (ToHex) >= .call
-  (metamask-call "0x878576534EA9C7ec24FcBf512C6f56d4ED1B9a56" .call)
+  (metamask-call "0xa55e752986a5a676b9b529bcd8288c55eacecc00" .call)
   (Log "Call Input"))
 
 (defchain delegate
