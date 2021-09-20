@@ -30,9 +30,9 @@
   (do
     ; code/script, use working directory artifacts
     (defchain fragment-minter
-      "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData
-      "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData
-      include-cost (BigInt) (BigInt.ToBytes) = .includeCost
+      "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData (ToHex) (Log "immutableData")
+      "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData (ToHex) (Log "mutableData")
+      include-cost (BigInt) (BigInt.ToBytes) = .includeCost (ToHex) (Log "includeCost")
       [.immutableData .mutableData [] .includeCost]
       (Eth.EncodeCall fragment-abi "upload")
       (ToHex) >= .call
