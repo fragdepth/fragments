@@ -183,18 +183,24 @@
 
 (defn load-file-chain [hash bytes]
   (Chain (if bytes "load-bytes" "load-string")
-         (ExpectString) >= .file-name (Log "LOADING")
+         (ExpectString) = .file-name (Log "LOADING")
          ; try load regular file path
          ; if fails assume we are loading from chain
          ; and so use file-name + fragment hash
          (Maybe (->
-                 base-folder (PrependTo .file-name)
-                 .file-name (FS.Read :Bytes bytes))
+                 .file-name >= .mfile-name
+                 base-folder (PrependTo .mfile-name)
+                 .mfile-name (FS.Read :Bytes bytes))
                 (->
-                 hash (AppendTo .file-name)
-                 .file-name (Hash.Keccak-256) (ToBase58) > .file-name
-                 "cache/fs/" (PrependTo .file-name)
-                 .file-name (FS.Read :Bytes bytes))
+                 .file-name >= .mfile-name
+                 (if (= "" hash)
+                   (-> (str tmp-folder "live-chain-eth-id")
+                       (FS.Read))
+                   hash)
+                 (AppendTo .mfile-name)
+                 .mfile-name (Log "BBB") (Hash.Keccak-256) (ToBase58) > .mfile-name
+                 "cache/fs/" (PrependTo .mfile-name)
+                 .mfile-name (FS.Read :Bytes bytes))
                 :Silent true)))
 
 (def load-string-chain (load-file-chain "" false))
@@ -202,34 +208,46 @@
 (def load-bytes-chain (load-file-chain "" true))
 (defn load-bytes [file-name] (run-chain load-bytes-chain file-name))
 
+; unboxes the fragment and loads it into the right disk location and cache location
 (defn load-fragment [write-files]
   (-> (| (Take 0) (Brotli.Decompress) (FromBytes) (ExpectTable) = .files
          (Take ".s") (ExpectString) = .loaded-fragment-immutable >> .fragment-result)
       (| (Take 1) (Brotli.Decompress) (FromBytes) (ExpectTable)
          (Take "e") (ExpectString) = .loaded-fragment-mutable >> .fragment-result)
+      ; when loaded with (frag) we don't want to write to disk those files
       (if write-files (->
                        (str tmp-folder "immutable.tmp.edn")
                        (FS.Write .loaded-fragment-immutable :Overwrite true)
                        (str tmp-folder "mutable.tmp.edn")
-                       (FS.Write .loaded-fragment-mutable :Overwrite true)))
-      .files (ForEach
-              (->
-               = .file
-               (Take 0) (ExpectString) >= .file-name
-               .file-name (WhenNot
-                           (Any [".s" ".v"]) ; avoid main script and version
-                           (Maybe (->
-                                   ; append fragment has to name to make it unique
-                                   .b58-fragment-hash (AppendTo .file-name)
-                                   .file-name (Hash.Keccak-256) (ToBase58) > .file-name
-                                   "cache/fs/" (PrependTo .file-name)
-                                   (Maybe
-                                    (->
-                                     .file (Take 1) (ExpectBytes) = .file-data
-                                     .file-name (FS.Write .file-data))
-                                    (->
-                                     .file (Take 1) (ExpectString) = .file-data
-                                     .file-name (FS.Write .file-data))))))))
+                       (FS.Write .loaded-fragment-mutable :Overwrite true)
+                       (str tmp-folder "live-chain-eth-id")
+                       (FS.Write .b58-fragment-hash :Overwrite true)))
+      .files
+      (ForEach
+       (->
+        = .file
+        (Take 0) (ExpectString) >= .file-name
+        .file-name
+        (WhenNot
+         (Any [".s" ".v"]) ; avoid main script and version
+         (Maybe
+          (->
+           ; append fragment has to name to make it unique
+           .b58-fragment-hash (AppendTo .file-name)
+           .file-name (Log "AAA") (Hash.Keccak-256) (ToBase58) > .file-name
+           "cache/fs/" (PrependTo .file-name)
+           .file-name
+           (FS.IsFile)
+           (WhenNot
+            (Is true)
+            (-> (Maybe
+                 (->
+                  .file (Take 1) (ExpectBytes) = .file-data
+                  .file-name (FS.Write .file-data :Overwrite true))
+                 (->
+                  .file (Take 1) (ExpectString) = .file-data
+                  .file-name (FS.Write .file-data :Overwrite true))
+                 true))))))))
       .fragment-result))
 
 (defn frag [hash & args]
