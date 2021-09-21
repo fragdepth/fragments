@@ -1,0 +1,55 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+(def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+(def include-cost uint256-max) ; uint256 max - don't allow inclusion
+
+(defnode root)
+
+(defloop main
+  (GFX.MainWindow
+   :Title "Hasten Minter"
+   :Width 512 :Height 300
+   :Contents
+   (->
+    (GUI.Window
+     "Minter"
+     :Pos (Int2 0 0)
+     :Contents
+     (->
+      (GUI.TextInput "Root Folder" "dir")
+      (GUI.TextInput "Name" "name")
+      (GUI.TextInput "Description" "desc")
+      (GUI.TextInput "Window Width" "width")
+      (GUI.TextInput "Window Height" "height")
+      (GUI.TextInput "Attributes" "attrs")
+      ; we need to run first
+      (GUI.Button "1. Run"
+                  (-> "../src/entry.edn" >> .args
+
+                      "--rootFolder" >> .args
+                      .dir >> .args
+                      "--windowTitle" >> .args
+                      .name >> .args
+                      "--description" >> .args
+                      .desc >> .args
+                      "--windowWidth" >> .args
+                      .width >> .args
+                      "--windowHeight" >> .args
+                      .height >> .args
+                      "--attributes" >> .args
+                      .attrs >> .args
+
+                      "" (Process.Run *cbl* .args :Timeout 20)))
+      ; output minting params now
+      (GUI.Button "2. Mint"
+                  (->
+                   "../src/tmp/live-chain-binary" (FS.Read :Bytes true) = .immutableData (ToHex) (Log "immutableData")
+                   "../src/tmp/live-chain-env-binary" (FS.Read :Bytes true) = .mutableData (ToHex) (Log "mutableData")
+                   [] (Log "references")
+                   include-cost (BigInt) (BigInt.ToBytes) = .includeCost (ToHex) (Log "includeCost")))
+      ;
+      )))))
+
+(schedule root main)
+(run root 0.016667)
