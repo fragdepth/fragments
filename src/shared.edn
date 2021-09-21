@@ -219,12 +219,17 @@
                .file-name (WhenNot
                            (Any [".s" ".v"]) ; avoid main script and version
                            (Maybe (->
-                                   .file (Take 1) (ExpectBytes) = .file-data
                                    ; append fragment has to name to make it unique
                                    .b58-fragment-hash (AppendTo .file-name)
                                    .file-name (Hash.Keccak-256) (ToBase58) > .file-name
                                    "cache/fs/" (PrependTo .file-name)
-                                   .file-name (FS.Write .file-data))))))
+                                   (Maybe
+                                    (->
+                                     .file (Take 1) (ExpectBytes) = .file-data
+                                     .file-name (FS.Write .file-data))
+                                    (->
+                                     .file (Take 1) (ExpectString) = .file-data
+                                     .file-name (FS.Write .file-data))))))))
       .fragment-result))
 
 (defn frag [hash & args]
