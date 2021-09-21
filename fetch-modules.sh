@@ -2,8 +2,8 @@ IPFS_SHADERC_WASI="bafybeif5juuskzbygggzexxwdbo265b777vpx3uxgeu4joiqkdpekdazji"
 IPFS_SHADERC_EXE="QmaTmrmDjxWeSCpgPAXWCSaC8wzqhBh46sSZuQ7ReNsYiZ"
 IPFS_SHADERC_EM="QmdRFgz7PvD5aPakpcUkUeGLY8sjXA3bE732Pif9Zb1RW5"
 IPFS_SHADERS="QmVo5QXFFxCwxjma1qaGLA1ki1wXp8ucmWChU79APN9ELt"
-IPFS_CBL_MT="Qmej6MeFu9TKmSeWPGekQwbCsQNujex4XboS5XNaxTB7tK"
-IPFS_CBL_ST="QmPqJX13hqXzu1ujdqEtgeye7uJAaFHrG9x14QFY1hhYkV"
+IPFS_CBL_MT="QmZCSMb2AuhQVztr6wJzvPFmnKm78bwNqystob1cFGHPZS"
+IPFS_CBL_ST="QmYhkfx8ybhDGxPqjL1Nghoe349sfLhGEB8Qfkxoj9YgYf"
 
 mkdir -p src/shaders/lib/gltf
 mkdir -p src/shaders/include

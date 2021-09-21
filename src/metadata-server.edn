@@ -73,7 +73,7 @@
     (->
      (Maybe
       (->
-       (ExpectLike {"" ""})
+       (ExpectLike {"" ""} true)
        (ForEach
         (->
          (| (Take 0) = .tname)
@@ -173,7 +173,7 @@
           "external_url" .extUrl
           "animation_url" .animUrl
           "image" .imageUrl
-          "attributes" .attribs} (ToJson)))
+          "attributes" .attribs} (Log) (ToJson)))
        (Http.Response :Headers {"Content-Type" "application/json"})
 
        ; we are done here
