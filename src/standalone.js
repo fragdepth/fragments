@@ -13,7 +13,7 @@ window.chainblocks = {
   },
   errorDetected: function () {
     // TODO display error image
-    var errorPage = document.getElementById('something-went-wrong');
+    var errorPage = document.getElementById('something-went-wrong-div');
     if (errorPage !== null) {
       errorPage.style.visibility = 'visible';
     }
@@ -250,7 +250,7 @@ async function reloadCBL() {
     print: (function () {
       return function (text) {
         if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-        if (text.includes("ERROR")) {
+        if (text.includes("[error]")) {
           console.error(text);
         } else {
           console.info(text);
