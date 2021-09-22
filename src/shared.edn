@@ -198,7 +198,7 @@
                        (FS.Read))
                    hash)
                  (AppendTo .mfile-name)
-                 .mfile-name (Log "BBB") (Hash.Keccak-256) (ToBase58) > .mfile-name
+                 .mfile-name (Hash.Keccak-256) (ToBase58) > .mfile-name
                  "cache/fs/" (PrependTo .mfile-name)
                  .mfile-name (FS.Read :Bytes bytes))
                 :Silent true)))
@@ -234,7 +234,7 @@
           (->
            ; append fragment has to name to make it unique
            .b58-fragment-hash (AppendTo .file-name)
-           .file-name (Log "AAA") (Hash.Keccak-256) (ToBase58) > .file-name
+           .file-name (Hash.Keccak-256) (ToBase58) > .file-name
            "cache/fs/" (PrependTo .file-name)
            .file-name
            (FS.IsFile)
