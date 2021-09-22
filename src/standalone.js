@@ -10,6 +10,12 @@ window.chainblocks = {
     if (loadingPlayerPage !== null) {
       loadingPlayerPage.style.visibility = 'hidden';
     }
+
+    // write cache to persistent storage once
+    window.chainblocks.instance.FS.syncfs(false, function (err) {
+      if (err)
+        throw err;
+    });
   },
   errorDetected: function () {
     // TODO display error image
@@ -205,39 +211,26 @@ async function reloadCBL() {
 
       // TODO Caching properly, emscripten uses indexdb but we had some issue when enabled
 
-      // // mount persistent storage
-      // module.FS.mkdir("/storage");
-      // module.FS.mount(module.IDBFS, {}, "/storage");
-      // // module.FS.mkdir("/cache");
-      // // module.FS.mount(module.IDBFS, {}, "/cache");
-      // // module.FS.mkdir("/shaders");
-      // // module.FS.mkdir("/shaders/cache");
-      // // module.FS.mount(module.IDBFS, {}, "/shaders/cache");
+      // mount persistent storage
+      module.FS.mkdir("/storage");
+      module.FS.mount(module.IDBFS, {}, "/storage");
+      module.FS.mkdir("/cache");
+      module.FS.mount(module.IDBFS, {}, "/cache");
+      module.FS.mkdir("/shaders");
+      module.FS.mkdir("/shaders/cache");
+      module.FS.mount(module.IDBFS, {}, "/shaders/cache");
 
-      // // grab from current storage
-      // await new Promise((resolve, reject) => {
-      //   // true == populate from the DB
-      //   module.FS.syncfs(true, function (err) {
-      //     if (err !== null) {
-      //       reject(err);
-      //     } else {
-      //       resolve();
-      //     }
-      //   });
-      // });
-
-      // // start sync loop to allow persistent storage
-      // if (window.chainblocks.syncfs) {
-      //   clearInterval(window.chainblocks.syncfs);
-      // }
-
-      // window.chainblocks.syncfs = setInterval(function () {
-      //   // false == write from mem to the DB
-      //   module.FS.syncfs(false, function (err) {
-      //     if (err)
-      //       throw err;
-      //   });
-      // }, 2000);
+      // load from current storage
+      await new Promise((resolve, reject) => {
+        // true == populate from the DB
+        module.FS.syncfs(true, function (err) {
+          if (err !== null) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
 
       // window.chainblocks.previewScreenShot = function () {
       //   const screenshotBytes = module.FS.readFile("/.hasten/screenshot.png");
