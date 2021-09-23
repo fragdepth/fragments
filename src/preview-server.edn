@@ -1,0 +1,16 @@
+(defnode main)
+
+(defloop handler ; must be loop!
+  (Http.Read) = .request
+  (Take "target") >= .target
+  (Log "target")
+  "/tmp" (PrependTo .target)
+  .target (Log "sending") (Http.SendFile))
+
+
+(defloop img-server
+  (Http.Server handler))
+
+(schedule main img-server)
+
+(run main 0.1)
