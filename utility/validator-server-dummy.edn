@@ -1,0 +1,25 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+; edit those
+
+(def chainId 4) ; rinkeby
+(def fragmentId "45XkDw38X9Wq5CmcCaCT8hg25VW1")
+(def max-amount 1)
+(def private-key-base "MY PRIVATE KEY GENERATION FAILURE")
+
+(defn custom-logic []
+  (->
+   ; add custom evaluation logic here from user passed params json, accessing .data
+   ; as well as add parameters and attributes here
+   ; we receive as string cos javascript is a pain in the ass with numbers
+   {} (Set .environment "a") ; attributes for OpenSea and such
+   "Description X" (Set .environment "d") ; description
+   "Entity Name X" (Set .environment "t") ; name/window title
+   512 (Set .environment "w") ; width
+   512 (Set .environment "h") ; height
+   "" (EDN.Uglify) (Set .environment "e") ; custom code
+   .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex)))
+
+; load the shared codebase
+(load-file "validator-server.edn")
