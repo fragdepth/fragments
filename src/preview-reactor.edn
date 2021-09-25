@@ -2,7 +2,9 @@
 ; Copyright © 2021 Fragcolor Pte. Ltd.
 
 ; how many seconds to wait to assume blocks are final
-(def finality-time 120)
+(def finality-time 42)
+
+(def remote-storage "http://localhost:7070")
 
 ; our geth node
 ;; (def node-ws "ws://127.0.0.1:8545")
@@ -87,7 +89,7 @@
   {"key" (slurp "preview-key.txt")
    "name" .cname
    "payload" .payload} (ToBytes)
-  (Http.Post "http://localhost:7070") (Log)
+  (Http.Post remote-storage) (Log)
 
   ; upload to nft.storage
   ;; "cache/img/" (PrependTo .cname)
