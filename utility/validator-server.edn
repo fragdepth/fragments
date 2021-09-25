@@ -37,7 +37,9 @@
      .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
      chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
      fragmentId (FromBase58) (AppendTo .payload)
-     (custom-logic) >> .result (HexToBytes) (AppendTo .payload)
+     (custom-logic)
+     ; compress
+     .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) >> .result (HexToBytes) (AppendTo .payload)
      .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
 
      (sign) >> .result
@@ -52,7 +54,9 @@
      .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
      chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
      fragmentId (FromBase58) (AppendTo .payload)
-     (custom-logic) >> .result (HexToBytes) (AppendTo .payload)
+     (custom-logic)
+     ; compress
+     .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) >> .result (HexToBytes) (AppendTo .payload)
 
      (sign) >> .result
      .result (ToJson) (Http.Response))

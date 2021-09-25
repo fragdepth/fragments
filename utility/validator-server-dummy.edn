@@ -19,7 +19,8 @@
    512 (Set .environment "w") ; width
    512 (Set .environment "h") ; height
    "" (EDN.Uglify) (Set .environment "e") ; custom code
-   .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex)))
+   ; DONE
+   ))
 
 ; load the shared codebase
 (load-file "validator-server.edn")

@@ -7,7 +7,6 @@
   "/tmp" (PrependTo .target)
   .target (Log "sending") (Http.SendFile))
 
-
 (defloop img-server
   (Http.Server handler))
 
