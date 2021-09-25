@@ -80,7 +80,7 @@
   "2.0" >> .args
   "" (Process.Run *cbl* .args :Timeout 20)
 
-  "tmp/" >= .fpath
+  "cache/img/" >= .fpath
   .cname (AppendTo .fpath)
   .fpath (FS.Read :Bytes true) = .payload
 
@@ -90,7 +90,7 @@
   (Http.Post "http://localhost:7070") (Log)
 
   ; upload to nft.storage
-  ;; "tmp/" (PrependTo .cname)
+  ;; "cache/img/" (PrependTo .cname)
   ;; .cname (FS.Read :Bytes true) (Http.Post "https://api.nft.storage/upload" :Headers
   ;;                                         {"accept" "application/json"
   ;;                                          "Authorization" "Bearer <KEY HERE>"

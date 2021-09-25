@@ -8,7 +8,7 @@
   .method
   (Match
    ["GET" (->
-           "/tmp" (PrependTo .target)
+           "/cache/img/" (PrependTo .target)
            .target (Log "sending") (Http.SendFile))
     "POST" (->
             .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) = .body
@@ -18,7 +18,7 @@
                    .body
                    (| (Take "payload") (ExpectBytes) = .payload)
                    (| (Take "name") (ExpectString) >= .name)
-                   "tmp/" (PrependTo .name)
+                   "cache/img/" (PrependTo .name)
                    .name (FS.Write .payload :Overwrite true)
                    "Ok" (Http.Response))))]))
 
