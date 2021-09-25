@@ -80,6 +80,15 @@
   "2.0" >> .args
   "" (Process.Run *cbl* .args :Timeout 20)
 
+  "tmp/" >= .fpath
+  .cname (AppendTo .fpath)
+  .fpath (FS.Read :Bytes true) = .payload
+
+  {"key" (slurp "preview-key.txt")
+   "name" .cname
+   "payload" .payload} (ToBytes)
+  (Http.Post "http://localhost:7070") (Log)
+
   ; upload to nft.storage
   ;; "tmp/" (PrependTo .cname)
   ;; .cname (FS.Read :Bytes true) (Http.Post "https://api.nft.storage/upload" :Headers

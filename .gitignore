@@ -20,3 +20,4 @@ src/CBlocks
 .DS_Store
 utility/*.png
 utility/preview.svg
+src/preview-key.txt

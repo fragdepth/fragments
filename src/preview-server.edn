@@ -2,10 +2,25 @@
 
 (defloop handler ; must be loop!
   (Http.Read) = .request
-  (Take "target") >= .target
-  (Log "target")
-  "/tmp" (PrependTo .target)
-  .target (Log "sending") (Http.SendFile))
+  (| (Take "target") >= .target (Log "target"))
+  (| (Take "method") = .method (Log "method"))
+
+  .method
+  (Match
+   ["GET" (->
+           "/tmp" (PrependTo .target)
+           .target (Log "sending") (Http.SendFile))
+    "POST" (->
+            .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) = .body
+            .body (Take "key") = .key
+            (When (Is (slurp "preview-key.txt"))
+                  (->
+                   .body
+                   (| (Take "payload") (ExpectBytes) = .payload)
+                   (| (Take "name") (ExpectString) >= .name)
+                   "tmp/" (PrependTo .name)
+                   .name (FS.Write .payload :Overwrite true)
+                   "Ok" (Http.Response))))]))
 
 (defloop img-server
   (Http.Server handler))
