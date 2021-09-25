@@ -66,5 +66,15 @@
 (defloop main
   (Http.Server handler :Port port))
 
+(defchain print-public-key
+  private-key-base (Hash.Keccak-256)
+  (ECDSA.PublicKey)
+  (Slice :From 1)
+  (Hash.Keccak-256)
+  (Slice :From 12)
+  (ToHex)
+  (Log "Delegate Eth Address"))
+
+(schedule Root print-public-key)
 (schedule Root main)
 (run Root 0.1)
