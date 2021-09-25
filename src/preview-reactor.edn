@@ -1,6 +1,9 @@
 ; SPDX-License-Identifier: BUSL-1.1
 ; Copyright © 2021 Fragcolor Pte. Ltd.
 
+; how many seconds to wait to assume blocks are final
+(def finality-time 120)
+
 ; our geth node
 ;; (def node-ws "ws://127.0.0.1:8545")
 ;; (def node-http "http://127.0.0.1:8545")
@@ -48,7 +51,7 @@
   (| (Take "topics")
      (| (Take 0) (BigInt) (BigInt.ToString) = .first)
      (| (Take 1) (BigInt) (BigInt.ToString) = .last))
-  (Time.EpochMs) (Math.Add (* 120 1000)) = .time ; wait 2 mins to ensure finality/inclusion
+  (Time.EpochMs) (Math.Add (* finality-time 1000)) = .time ; wait 2 mins to ensure finality/inclusion
   [[.tx-hash .first .last] .time] >> .events)
 
 (defchain produce-screenshot
@@ -74,8 +77,20 @@
   ".png" (AppendTo .cname)
   .cname >> .args
   "--screenshotDelay" >> .args
-  "1.0" >> .args
-  "" (Process.Run *cbl* .args :Timeout 20))
+  "2.0" >> .args
+  "" (Process.Run *cbl* .args :Timeout 20)
+
+  ; upload to nft.storage
+  ;; "tmp/" (PrependTo .cname)
+  ;; .cname (FS.Read :Bytes true) (Http.Post "https://api.nft.storage/upload" :Headers
+  ;;                                         {"accept" "application/json"
+  ;;                                          "Authorization" "Bearer <KEY HERE>"
+  ;;                                          "Content-Type" "image/*"}) (FromJson) (ExpectTable)
+  ;; (Log "Uploaded screenshot")
+  ;; (Take "value") (ExpectTable) (Take "cid") (ExpectString) = .cid
+  ;; (Log)
+  ;
+  )
 
 (defloop tx-scraper
   (Setup
@@ -107,8 +122,8 @@
 (defchain test
   "1" (Spawn produce-screenshot))
 
-;; (schedule main test)
-(schedule main events-listener)
-(schedule main tx-scraper)
+(schedule main test)
+;; (schedule main events-listener)
+;; (schedule main tx-scraper)
 
 (run main 0.1)
