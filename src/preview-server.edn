@@ -25,7 +25,7 @@
                 "/assets/Printing.png"))
            (Log "sending") (Http.SendFile))
     "POST" (->
-            .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) = .body
+            .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) (Log "payload") = .body
             .body (Take "key") (ExpectString) = .key
             (When (Is key)
                   (->
@@ -37,6 +37,8 @@
                    "Ok" (Http.Response))))]))
 
 (defloop img-server
+  (Setup
+   key (Log "key"))
   (Http.Server handler :Port port))
 
 (schedule main img-server)
