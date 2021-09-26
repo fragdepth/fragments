@@ -1,3 +1,9 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+(def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
+
 (defnode main)
 
 (defloop handler ; must be loop!
@@ -8,8 +14,15 @@
   .method
   (Match
    ["GET" (->
-           "/cache/img/" (PrependTo .target)
-           .target (Log "sending") (Http.SendFile))
+           "cache/img/" (PrependTo .target)
+           .target (FS.IsFile)
+           (If (Is true)
+               (->
+                "/" (PrependTo .target) ; needed by sendfile
+                .target)
+               (->
+                "/assets/Printing.png"))
+           (Log "sending") (Http.SendFile))
     "POST" (->
             .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) = .body
             .body (Take "key") = .key
@@ -23,7 +36,7 @@
                    "Ok" (Http.Response))))]))
 
 (defloop img-server
-  (Http.Server handler))
+  (Http.Server handler :Port port))
 
 (schedule main img-server)
 
