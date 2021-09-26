@@ -26,7 +26,7 @@
   (Match
    ["/mint"
     (->
-     .request (Take "body") (FromJson) (ExpectTable) = .data
+     .request (Take "body") (Log "body") (FromJson) (ExpectTable) = .data
 
      .data (Take "amount") (ExpectInt) = .amount
      ; don't allow more than max amount
@@ -43,11 +43,11 @@
      .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
 
      (sign) >> .result
-     .result (ToJson) (Http.Response))
+     .result (ToJson) (Log "response") (Http.Response :Headers {"Content-Type" "application/json"}))
 
     "/bid"
     (->
-     .request (Take "body") (FromJson) (ExpectTable) = .data
+     .request (Take "body") (Log "body") (FromJson) (ExpectTable) = .data
 
      ; prepare bytes payload for signature
      (Clear .result)
@@ -59,7 +59,7 @@
      .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) >> .result (HexToBytes) (AppendTo .payload)
 
      (sign) >> .result
-     .result (ToJson) (Http.Response))
+     .result (ToJson) (Log "response") (Http.Response :Headers {"Content-Type" "application/json"}))
 
     nil (-> (Restart))]))
 
