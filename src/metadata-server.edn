@@ -78,12 +78,14 @@
         (->
          (| (Take 0) = .tname)
          (| (Take 1) = .tvalue)
-             ; maybe filter them here!
+         ; maybe filter them here!
          {"trait_type" .tname
           "value" .tvalue} >> .attribs))))))))
 
 (defloop handler ; must be loop!
   (Http.Read) = .request
+
+  (| (Sequence .attribs))
 
   (Take "target")
   (Log "target")
@@ -174,7 +176,7 @@
           "animation_url" .animUrl
           "image" .imageUrl
           "attributes" .attribs} (Log) (ToJson)))
-       (Http.Response :Headers {"Content-Type" "application/json"})
+       (Http.Response)
 
        ; we are done here
        (Restart))))
@@ -226,8 +228,6 @@
          ; build name
          .mdata (Take "t") (ExpectString) >= .name
 
-         (Clear .attribs) ; defined above in fragment / same type
-
          (find-attributes)
 
          ; find custom description
@@ -244,7 +244,7 @@
           "animation_url" .animUrl
           "image" .imageUrl
           "attributes" .attribs} (ToJson)))
-       (Http.Response :Headers {"Content-Type" "application/json"})
+       (Http.Response)
 
        (Restart))))
 
