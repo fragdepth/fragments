@@ -43,7 +43,7 @@
      .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
 
      (sign) >> .result
-     .result (ToJson) (Log "response") (Http.Response :Headers {"Content-Type" "application/json"}))
+     .result (ToJson) (Log "response") (Http.Response))
 
     "/bid"
     (->
@@ -59,7 +59,7 @@
      .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) >> .result (HexToBytes) (AppendTo .payload)
 
      (sign) >> .result
-     .result (ToJson) (Log "response") (Http.Response :Headers {"Content-Type" "application/json"}))
+     .result (ToJson) (Log "response") (Http.Response))
 
     nil (-> (Restart))]))
 
