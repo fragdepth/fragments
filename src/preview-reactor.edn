@@ -3,18 +3,18 @@
 
 ; how many seconds to wait to assume blocks are final
 (def finality-time 42)
-
+(def width "600")
+(def height "600")
 (def remote-storage "http://localhost:7070")
-
 ; our geth node
 ;; (def node-ws "ws://127.0.0.1:8545")
 ;; (def node-http "http://127.0.0.1:8545")
-
 ; rinkeby
 (def node-ws "wss://rinkeby.infura.io/ws/v3/f1f1f88885f54de7955ce248e1d69046")
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
+(def entity-contract "0x503dAe3179510569269ed6E8173A01cbE0769454")
 
-(def entity-contract "0xeEca89Be996Ec6502A29C89c7f667e9e1EcD9F31")
+;-----------------
 
 (def _args (eval `(assoc {} ~@*command-line-args*)))
 
@@ -47,14 +47,19 @@
    (Eth.Contract :Contract entity-contract
                  :Abi (slurp "Entity.json")))
 
-  (Eth.WaitEvent :Event "Upload")
+  (Eth.WaitEvent :Event "Transfer")
   (Log "Event")
   (| (Take "transaction_hash") = .tx-hash)
   (| (Take "topics")
-     (| (Take 0) (BigInt) (BigInt.ToString) = .first)
-     (| (Take 1) (BigInt) (BigInt.ToString) = .last))
-  (Time.EpochMs) (Math.Add (* finality-time 1000)) = .time ; wait 2 mins to ensure finality/inclusion
-  [[.tx-hash .first .last] .time] >> .events)
+     (| (Take 1) (BigInt) (BigInt.ToString) = .fromAddr)
+     (| (Take 3) (BigInt) (BigInt.ToString) = .tokenId))
+  .fromAddr
+  (Log "from")
+  (When (Is "0") ; mint
+        (->
+         .tokenId (Log "Queued preview of")
+         (Time.EpochMs) (Math.Add (* finality-time 1000)) = .time ; wait to ensure finality/inclusion
+         [[.tx-hash .tokenId] .time] >> .events)))
 
 (defchain produce-screenshot
   (ExpectString) = .requestedId
@@ -70,10 +75,14 @@
   "entry.edn" >> .args
   "--entity" >> .args
   entity-contract (HexToBytes) (ToBase58) >> .args = .contractB58
-  "--entityId" >> .args
+  "--entity-id" >> .args
   .requestedId >> .args
   "--gateway" >> .args
   node-http >> .args
+  "--windowWidth" >> .args
+  width >> .args
+  "--windowHeight" >> .args
+  height >> .args
   "--screenshot" >> .args
   [.requestedId .contractB58 .env-hash] (Hash.Keccak-256) (ToBase58) >= .cname
   ".png" (AppendTo .cname)
@@ -116,9 +125,9 @@
    (Eth node-http))
 
   (Time.Pop .events)
+  (Log "Processing")
   (| (Take 0) = .tx-hash)
-  (| (Take 1) = .first)
-  (| (Take 2) = .last)
+  (| (Take 1) = .tokenId)
   (Maybe (->
           ; can be reordered!
           ; and can also be not included so we do this check here to make sure it's a real one
@@ -126,15 +135,15 @@
           (Eth.Transaction)
           (Log "Tx")
           ; from now on generate screenshot by spawning a new process
-          .first (Spawn produce-screenshot)
+          .tokenId (Spawn produce-screenshot)
           ; let's give ourself a small pause to avoid flooding the node
           (Pause 2.0))))
 
-(defchain test
-  "1" (Spawn produce-screenshot))
+;; (defchain test
+;;   "1" (Spawn produce-screenshot))
 
-(schedule main test)
-;; (schedule main events-listener)
-;; (schedule main tx-scraper)
+;; (schedule main test)
+(schedule main events-listener)
+(schedule main tx-scraper)
 
 (run main 0.1)
