@@ -2,10 +2,10 @@
 ; Copyright © 2021 Fragcolor Pte. Ltd.
 
 ; how many seconds to wait to assume blocks are final
-(def finality-time 42)
-(def width "600")
-(def height "600")
-(def remote-storage "http://localhost:7070")
+(def finality-time 15)
+(def width "512")
+(def height "512")
+(def remote-storage "https://img.fragments.foundation")
 ; our geth node
 ;; (def node-ws "ws://127.0.0.1:8545")
 ;; (def node-http "http://127.0.0.1:8545")
