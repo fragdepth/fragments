@@ -243,6 +243,14 @@
       (__entity-load-cached (get _args "--entity") (get _args "--entity-id"))
       (load-fragment true)))
 
+   (if (contains? _args "--fromFragCache")
+     (Setup
+      (get _args "--fromFragCache") = .b58-fragment-hash
+      (ReadFile (str "cache/frag/" (get _args "--fromFragCache")))
+      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true)
+      (Take "data")
+      (load-fragment true)))
+
    ; our main routine, manage a bgfx window and a chain loader
    (println (str "Width " (get _parameters :windowWidth) " Height " (get _parameters :windowHeight)))
    (GFX.MainWindow
@@ -267,7 +275,9 @@
       (ChainLoader
        (Chain*
         ; if ethereum fragment is loaded use that
-        (if (or (contains? _args "--fragment") (and (contains? _args "--entity") (contains? _args "--entity-id")))
+        (if (or (contains? _args "--fromFragCache")
+                (or (contains? _args "--fragment")
+                    (and (contains? _args "--entity") (contains? _args "--entity-id"))))
           (str tmp-folder "immutable.tmp.edn")
           (str base-folder (get _parameters :immutable)))
 
@@ -291,7 +301,9 @@
        ; compress source to url format
        (->
         ; Don't save if we are running as fragment/entity player!
-        (if (not (or (contains? _args "--fragment") (and (contains? _args "--entity") (contains? _args "--entity-id"))))
+        (if (not (or (contains? _args "--fromFragCache")
+                     (or (contains? _args "--fragment")
+                         (and (contains? _args "--entity") (contains? _args "--entity-id")))))
           (->
             ; do some reflection to evaluate the chain
             ; mark as tainted if we access the internet

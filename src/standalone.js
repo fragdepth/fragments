@@ -109,6 +109,7 @@ async function reloadCBL() {
   const entityB58 = urlParams.get("e");
   const entityId = urlParams.get("id");
   const fragmentId = urlParams.get("t");
+  const fromFragCache = urlParams.get("_cache_");
 
   const args = (() => {
     const gateway = (() => {
@@ -122,8 +123,10 @@ async function reloadCBL() {
     })();
     if (entityB58) {
       return ["/entry.edn", "--entity", entityB58, "--entity-id", entityId, "--gateway", gateway];
-    } else {
+    } else if (fragmentId) {
       return ["/entry.edn", "--fragment", fragmentId, "--gateway", gateway]
+    } else {
+      return ["/entry.edn", "--fromFragCache", fromFragCache]
     }
   })();
 
@@ -208,6 +211,11 @@ async function reloadCBL() {
       module.FS.createPreloadedFile("/", "Fragment.json", "Fragment.json", true, false);
       module.FS.createPreloadedFile("/", "utility.edn", "utility.edn", true, false);
       module.FS.createPreloadedFile("/", "shared.edn", "shared.edn", true, false);
+      if (fromFragCache) {
+        module.FS.mkdir("/cache");
+        module.FS.mkdir("/cache/frag");
+        module.FS.createPreloadedFile("/cache/frag", fromFragCache, "cache/frag/" + fromFragCache, true, false);
+      }
 
       // TODO Caching properly, emscripten uses indexdb but we had some issue when enabled
 
