@@ -24,7 +24,7 @@
                 "/assets/Printing.png"))
            (Log "sending") (Http.SendFile))
     "POST" (->
-            .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) = .body
+            .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) (Log) = .body
             .body (Take "key") = .key
             (When (Is (slurp "preview-key.txt"))
                   (->
@@ -32,7 +32,7 @@
                    (| (Take "payload") (ExpectBytes) = .payload)
                    (| (Take "name") (ExpectString) >= .name)
                    "cache/img/" (PrependTo .name)
-                   .name (FS.Write .payload :Overwrite true)
+                   .name (Log "storing") (FS.Write .payload :Overwrite true)
                    "Ok" (Http.Response))))]))
 
 (defloop img-server
