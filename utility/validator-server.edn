@@ -33,16 +33,15 @@
      (When (IsMore max-amount) (-> (Restart)))
 
      ; prepare bytes payload for signature
-     (Clear .result)
      .data (Take "sender") (ExpectString) (HexToBytes) >= .payload
      chainId (BigInt) (BigInt.ToBytes :Bits 256) (AppendTo .payload)
      fragmentId (FromBase58) (AppendTo .payload)
      (custom-logic)
      ; compress
-     .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) >> .result (HexToBytes) (AppendTo .payload)
+     .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) (Set .result "data") (HexToBytes) (AppendTo .payload)
      .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
 
-     (sign) >> .result
+     (sign) (Set .result "signature")
      .result (ToJson) (Log "response") (Http.Response))
 
     "/bid"
@@ -56,9 +55,9 @@
      fragmentId (FromBase58) (AppendTo .payload)
      (custom-logic)
      ; compress
-     .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) >> .result (HexToBytes) (AppendTo .payload)
+     .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) (Set .result "data") (HexToBytes) (AppendTo .payload)
 
-     (sign) >> .result
+     (sign) (Set .result "signature")
      .result (ToJson) (Log "response") (Http.Response))
 
     nil (-> (Restart))]))
