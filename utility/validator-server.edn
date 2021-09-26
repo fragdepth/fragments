@@ -4,6 +4,8 @@
 (def _args (eval `(assoc {} ~@*command-line-args*)))
 (def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
 
+(def headers {"Access-Control-Allow-Origin" "*"})
+
 (defnode Root)
 
 (defn sign []
@@ -42,7 +44,7 @@
      .amount (BigInt) (BigInt.ToBytes :Bits 96) (AppendTo .payload)
 
      (sign) (Set .result "signature")
-     .result (ToJson) (Log "response") (Http.Response))
+     .result (ToJson) (Log "response") (Http.Response :Headers headers))
 
     "/bid"
     (->
@@ -58,7 +60,7 @@
      .environment (ToBytes) (Brotli.Compress :Quality 11) (ToHex) (Set .result "data") (HexToBytes) (AppendTo .payload)
 
      (sign) (Set .result "signature")
-     .result (ToJson) (Log "response") (Http.Response))
+     .result (ToJson) (Log "response") (Http.Response :Headers headers))
 
     nil (-> (Restart))]))
 
