@@ -22,7 +22,7 @@
                 "/" (PrependTo .target) ; needed by sendfile
                 .target)
                (->
-                "/assets/Printing.png"))
+                "/assets/Loading2.png"))
            (Log "sending") (Http.SendFile))
     "POST" (->
             .request (Take "body") (StringToBytes) (FromBytes) (ExpectTable) (Log "payload") = .body
