@@ -377,6 +377,12 @@
              (slurp (str base-folder (get _parameters :mutable))) (EDN.Uglify) (Set .environment "e")
              ; compress and write
              .fs (ToBytes) (Brotli.Compress :Quality 11) = .compressed-bytes >> .local-fragment
+             ; sign the immutable data to be able to verify it, this way we can authenticate the minting source
+             "runtime-key.txt" (FS.IsFile)
+             (When (Is true)
+                   (-> "runtime-key.txt" (FS.Read :Bytes false) = .pkey
+                       .compressed-bytes (Hash.Keccak-256) (ECDSA.Sign .pkey) (Set .environment "s")
+                       (Msg "Signed with runtime key")))
              .environment (ToBytes) (Brotli.Compress :Quality 11) = .compressed-env >> .local-fragment
              .local-fragment (Set .frag-data "data")
              (get _parameters :owner) (Set .frag-data "owner")

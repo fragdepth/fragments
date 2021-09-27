@@ -21,3 +21,4 @@ src/CBlocks
 utility/*.png
 utility/preview.svg
 src/preview-key.txt
+src/runtime-key.txt
