@@ -16,11 +16,3 @@ jobs:
         sh fetch-modules.sh
         ipfs-car --pack src --output hasten.car
         curl -X POST --data-binary @hasten.car -H 'Authorization: Bearer ${{ secrets.NFT_STORAGE_KEY }}' -H "Content-Type: application/car" https://api.nft.storage/upload
-    # - name: Pack to IPFS
-    #   uses: chainblocks/ipfs-action@master
-    #     if: ${{ github.event_name == 'push' }}
-    #     with:
-    #       path: src/
-    #       service: infura
-    #       port: 5001
-    #       protocol: https
