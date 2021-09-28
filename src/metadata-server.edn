@@ -82,6 +82,8 @@
          {"trait_type" .tname
           "value" .tvalue} >> .attribs))))))))
 
+(def headers {"Access-Control-Allow-Origin" "*"})
+
 (defloop handler ; must be loop!
   (Http.Read) = .request
 
@@ -176,7 +178,7 @@
           "animation_url" .animUrl
           "image" .imageUrl
           "attributes" .attribs} (Log) (ToJson)))
-       (Http.Response)
+       (Http.Response :Headers headers)
 
        ; we are done here
        (Restart))))
@@ -244,7 +246,7 @@
           "animation_url" .animUrl
           "image" .imageUrl
           "attributes" .attribs} (ToJson)))
-       (Http.Response)
+       (Http.Response :Headers headers)
 
        (Restart))))
 
