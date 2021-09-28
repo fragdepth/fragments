@@ -15,7 +15,7 @@
   .method
   (Match
    ["GET" (->
-           "shaders/cache/" (PrependTo .target)
+           "cache/web-shaders/" (PrependTo .target)
            .target (FS.IsFile)
            (If
             (Is false)
