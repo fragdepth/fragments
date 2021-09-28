@@ -192,6 +192,7 @@
                 (->
                  .file-name >= .mfile-name
                  (if (= "" hash)
+                   ; this is a hack/ugly way to get the base fragment hash
                    (-> (str tmp-folder "live-chain-eth-id")
                        (FS.Read))
                    hash)
@@ -201,6 +202,11 @@
                  .mfile-name (FS.Read :Bytes bytes))
                 :Silent true)))
 
+(defchain read-self-hash
+  (str tmp-folder "live-chain-eth-id")
+  (FS.Read))
+
+(defn self-hash [] (read-var (run-chain read-self-hash "")))
 (def load-string-chain (load-file-chain "" false))
 (defn load-string [file-name] (read-var (run-chain load-string-chain file-name)))
 (def load-bytes-chain (load-file-chain "" true))
@@ -252,6 +258,7 @@
   (let [load-env (if (not (nil? (first args))) (first args) false)
         params (if (not (nil? (first (rest args)))) (first (rest args)) {})
         main? false ; we are not the main fragment, override this
+        self-hash (fn* [] hash)
         load-string-chain (load-file-chain hash false)
         load-string (fn* [file-name] (read-var (run-chain load-string-chain file-name)))
         load-bytes-chain (load-file-chain hash true)
@@ -319,13 +326,13 @@
 
 (defchain ugly-shader
   (Regex.Replace #"\r" "") ; remove \r
-  (Regex.Replace #"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*" "/") ; remove multi line comments
-  (Regex.Replace #"\/\/.*" "") ; remove one line comments
-  (Regex.Replace #"\n\s*\n" "\n") ; remove empty lines
-  (Regex.Replace #"\t+" #" ") ; remove tabs, replace with space
-  (Regex.Replace #"  +" #" ") ; remove more than one space
-  (Regex.Replace #"\( " "(") ; remove useless spaces
-  (Regex.Replace #" \)" ")") ; remove useless spaces
-  (Regex.Replace #"\)\s*\{" ") {") ; remove useless spaces
+  ;; (Regex.Replace #"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*" "/") ; remove multi line comments
+  ;; (Regex.Replace #"\/\/.*" "") ; remove one line comments
+  ;; (Regex.Replace #"\n\s*\n" "\n") ; remove empty lines
+  ;; (Regex.Replace #"\t+" #" ") ; remove tabs, replace with space
+  ;; (Regex.Replace #"  +" #" ") ; remove more than one space
+  ;; (Regex.Replace #"\( " "(") ; remove useless spaces
+  ;; (Regex.Replace #" \)" ")") ; remove useless spaces
+  ;; (Regex.Replace #"\)\s*\{" ") {") ; remove useless spaces
   (Regex.Replace #".*$" #"$&\n") ; fix eof
   )
