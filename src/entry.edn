@@ -25,6 +25,7 @@
                   :description (if (contains? _args "--description") (get _args "--description") "")
                   :screenshot (if (contains? _args "--screenshot") (get _args "--screenshot") nil)
                   :screenshotDelay (if (contains? _args "--screenshotDelay") (read-string (get _args "--screenshotDelay")) 2.0)
+                  :compileWebShaders (if (contains? _args "--compileWebShaders") (read-string (get _args "--compileWebShaders")) false)
                   :gatewayURL (if (contains? _args "--gateway") (get _args "--gateway") "https://cloudflare-eth.com")})
 
 (if (not (= platform "emscripten"))
@@ -110,19 +111,6 @@
          (| (FS.Remove))
          .hash
          (Stop))))
-
-(defchain ugly-shader
-  (Regex.Replace #"\r" "") ; remove \r
-  (Regex.Replace #"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*" "/") ; remove multi line comments
-  (Regex.Replace #"\/\/.*" "") ; remove one line comments
-  (Regex.Replace #"\n\s*\n" "\n") ; remove empty lines
-  (Regex.Replace #"\t+" #" ") ; remove tabs, replace with space
-  (Regex.Replace #"  +" #" ") ; remove more than one space
-  (Regex.Replace #"\( " "(") ; remove useless spaces
-  (Regex.Replace #" \)" ")") ; remove useless spaces
-  (Regex.Replace #"\)\s*\{" ") {") ; remove useless spaces
-  (Regex.Replace #".*$" #"$&\n") ; fix eof
-  )
 
 (defn FColor
   [r g b a]
@@ -332,22 +320,23 @@
              (FS.Read)
              (EDN.Uglify
                ; hooks
-              ["Shader" ; minimize shaders
-               (->
-                 ; shaders might be complex and fragmentd/macro etc
-                 ; so just try if this works, if not pass the original
-                = .sparams
-                (Maybe
-                 (->
-                  .sparams (Take 0) (ExpectString) >> .sres ; Shader
-                  .sparams (Take 1) (ExpectString) >> .sres ; var name
-                  .sparams (Take 2) (ExpectString) >> .sres ; varyings
-                  .sparams (Take 3) (ExpectString) (Do ugly-shader) >> .sres
-                  .sparams (Take 4) (ExpectString) (Do ugly-shader) >> .sres
-                  .sres)
-                 (->
-                  .sparams)
-                 :Silent true))
+              [
+              ;;  "Shader" ; minimize shaders
+              ;;  (->
+              ;;    ; shaders might be complex and fragmentd/macro etc
+              ;;    ; so just try if this works, if not pass the original
+              ;;   = .sparams
+              ;;   (Maybe
+              ;;    (->
+              ;;     .sparams (Take 0) (ExpectString) >> .sres ; Shader
+              ;;     .sparams (Take 1) (ExpectString) >> .sres ; var name
+              ;;     .sparams (Take 2) (ExpectString) >> .sres ; varyings
+              ;;     .sparams (Take 3) (ExpectString) (Do ugly-shader) >> .sres
+              ;;     .sparams (Take 4) (ExpectString) (Do ugly-shader) >> .sres
+              ;;     .sres)
+              ;;    (->
+              ;;     .sparams)
+              ;;    :Silent true))
                "load-string"
                (->
                 (| (Take 0) (ExpectString) >> .lsres) ; load-string

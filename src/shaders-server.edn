@@ -1,0 +1,37 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+(def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
+(def key (slurp "preview-key.txt"))
+
+(defnode main)
+
+(defloop handler ; must be loop!
+  (Http.Read) = .request
+  (| (Take "target") >= .target (Log "target"))
+  (| (Take "method") = .method (Log "method"))
+
+  .method
+  (Match
+   ["GET" (->
+           "shaders/cache/" (PrependTo .target)
+           .target (FS.IsFile)
+           (When
+            (Is false)
+            (->
+             ; compile shader, targeting emscripten, store it and serve it
+             nil
+             (WriteFile .target :Flush true)))
+           "/" (PrependTo .target) ; needed by sendfile
+           .target
+           (Log "sending") (Http.SendFile))]))
+
+(defloop img-server
+  (Setup
+   key (Log "key"))
+  (Http.Server handler :Port port))
+
+(schedule main img-server)
+
+(run main 0.1)

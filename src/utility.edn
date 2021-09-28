@@ -17,6 +17,7 @@
 (def Canvas-Height (get _parameters :windowHeight))
 (def XR? (get _parameters :xrSupported))
 (def identity identity)
+(def shaders-server "https://shaders.fragments.foundation/")
 
 ; utility to crypto verify bytes
 (defn verify-bytes-hash [type kkhash]
@@ -34,15 +35,16 @@
 ; ipfs loader to embedded inside scripts
 (defn load-ipfs [hash & kkhash]
   (let [node (Node)
-        chain (Chain "downloader"
-                                ; this is text code
-                     nil (Http.Get (str ipfs-gateway "/ipfs/" hash) :Timeout 60) (FromJson) (ExpectTable) = .json
-                     .json (Take "code") (ExpectString) >= .source-code
-                     (verify-bytes-hash "IPFS Script" kkhash)
-                                ; ignore environment
-                     "(chainify [" (PrependTo .source-code)
-                     "])" (AppendTo .source-code)
-                     .source-code)
+        chain (Chain
+               "downloader"
+               ; this is text code
+               nil (Http.Get (str ipfs-gateway "/ipfs/" hash) :Timeout 60) (FromJson) (ExpectTable) = .json
+               .json (Take "code") (ExpectString) >= .source-code
+               (verify-bytes-hash "IPFS Script" kkhash)
+               ; ignore environment
+               "(chainify [" (PrependTo .source-code)
+               "])" (AppendTo .source-code)
+               .source-code)
         code (pr-str (do
                        (schedule node chain)
                        (run node 0.1)
@@ -151,32 +153,85 @@
     (dl-func hash (if (empty? full) false (first full)))))
 
 (if (= platform "emscripten")
-             ; emscripten shader compiler
+  ; emscripten shader compiler
   (defn Shader [name varying vs-code fs-code]
     (let [hash (str name "-hash")
           shader (str name "-shader")
           sc (__make-shader)
-          loader (Chain (str name "-compiler")
-                        varying >> .Shader-args
-                        vs-code >> .Shader-args
-                        fs-code >> .Shader-args
-                        .Shader-args (Hash) >= .shader-hash
-                        (Get .shaders-cache hash :Default 0)
-                        (If (IsNot .shader-hash)
-                            (-> (Msg (str "compiling shader " name))
-                                .Shader-args (Do sc)
-                                           ; cache the shader as well
-                                (Set .shaders-cache shader))
-                            (-> (Get .shaders-cache shader)
-                                (ExpectLike sc))) = .shader
-                        .shader-hash (Set .shaders-cache hash)
-                        .shader)]
+          loader (Chain
+                  (str name "-compiler")
+                  (Clear .Shader-args)
+                  varying >> .Shader-args
+                  vs-code >> .Shader-args
+                  fs-code >> .Shader-args
+                  .Shader-args (Hash.Keccak-256) (ToBase58) >= .shader-hash
+                  (Get .shaders-cache hash :Default 0)
+                  (If
+                   (IsNot .shader-hash)
+                   (->
+                    (Maybe
+                     (->
+                      ; fetch from global online cache
+                      .shader-hash >= .shader-hash-url
+                      shaders-server (PrependTo .shader-hash-url)
+                      nil (Http.Get .shader-hash-url :Bytes true)
+                      (FromBytes) (ExpectBytesSeq)
+                      (| (Take 0) = .v-shader)
+                      (| (Take 1) = .f-shader)
+                      (GFX.Shader :VertexShader .v-shader :PixelShader .f-shader))
+                     (->
+                      ; locally compile
+                      (Msg (str "compiling shader " name))
+                      .Shader-args (Do sc)
+                      ; cache the shader as well
+                      (Set .shaders-cache shader))))
+                   (->
+                    (Get .shaders-cache shader)
+                    (ExpectLike sc))) = .shader
+                  .shader-hash (Set .shaders-cache hash)
+                  .shader)]
                  ; replace with detach and wait when we can share context
                  ; in order to allow chain cleanup
       (Setup (Do loader) = name)))
-             ; native platforms shader compiler
+  ; native platforms shader compiler
   (defn Shader [name varying vs-code fs-code]
     (Setup
+     (if (get _parameters :compileWebShaders)
+       (let [sc (fn* [varying code type]
+                     (->
+                      (Msg "compiling shader")
+                      "shaders/tmp/varying.txt" (FS.Write varying :Overwrite true)
+                      "shaders/tmp/shader.txt" (FS.Write code :Overwrite true)
+                      (Clear .params)
+                      "-f" >> .params
+                      "shaders/tmp/shader.txt"  >> .params
+                      "-o" >> .params
+                      "shaders/tmp/shader.bin" >> .params
+                      "--varyingdef" >> .params
+                      "shaders/tmp/varying.txt" >> .params
+                      "--platform" >> .params
+                      "asm.js" >> .params
+                      "-p" >> .params
+                      "300_es" >> .params
+                      "--type" >> .params
+                      type >> .params
+                      "-i" >> .params
+                      "shaders/include" >> .params
+                      .params (Log)
+                      "" (if (= platform "windows")
+                           (Process.Run "shaders/shadercRelease.exe" .params)
+                           (Wasm.Run "shaders/shadercRelease.wasm" .params))
+                      "shaders/tmp/shader.bin" (FS.Read :Bytes true)))]
+         (->
+          (Clear .Shader-args)
+          varying >> .Shader-args
+          vs-code >> .Shader-args
+          fs-code >> .Shader-args
+          .Shader-args (Hash.Keccak-256) (ToBase58) >= .shader-hash
+          "cache/web-shaders/" (PrependTo .shader-hash)
+          (sc varying vs-code "v") >> .web-shaders
+          (sc varying fs-code "f") >> .web-shaders
+          .web-shaders (WriteFile .shader-hash :Flush true))))
      {"varyings" varying "code" vs-code "defines" [""]}
      (GFX.CompileShader ShaderType.Vertex) = .vs-bytes
      {"varyings" varying "code" fs-code "defines" [""]}
