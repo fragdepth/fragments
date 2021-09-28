@@ -17,7 +17,7 @@
 (def Canvas-Height (get _parameters :windowHeight))
 (def XR? (get _parameters :xrSupported))
 (def identity identity)
-(def shaders-server "https://shaders.fragments.foundation/")
+(def shaders-server "https://shaders-cache.fragments.foundation/")
 
 ; utility to crypto verify bytes
 (defn verify-bytes-hash [type kkhash]
