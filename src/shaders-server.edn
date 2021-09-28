@@ -17,15 +17,15 @@
    ["GET" (->
            "shaders/cache/" (PrependTo .target)
            .target (FS.IsFile)
-           (When
+           (If
             (Is false)
             (->
              ; compile shader, targeting emscripten, store it and serve it
-             nil
-             (WriteFile .target :Flush true)))
-           "/" (PrependTo .target) ; needed by sendfile
-           .target
-           (Log "sending") (Http.SendFile))]))
+             "Shader not found" (Http.Response :Status 404))
+            (->
+             "/" (PrependTo .target) ; needed by sendfile
+             .target
+             (Log "sending") (Http.SendFile))))]))
 
 (defloop img-server
   (Setup
