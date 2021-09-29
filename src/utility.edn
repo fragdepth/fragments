@@ -164,11 +164,15 @@
                   varying >> .Shader-args
                   vs-code >> .Shader-args
                   fs-code >> .Shader-args
+
+                  ; TODO this is not good, should be tied to code but currently something is wrong when doing that
                   (Clear .Shader-hash-parts)
                   (self-hash) >> .Shader-hash-parts
                   (str name) >> .Shader-hash-parts
                   "0.1" >> .Shader-hash-parts
+                  (if (contains? _args "--entity") (get _args "--entity") "") >> .Shader-hash-parts
                   .Shader-hash-parts (Log) (Hash.Keccak-256) (ToBase58) >= .shader-hash
+
                   (Get .shaders-cache hash :Default 0)
                   (If
                    (IsNot .shader-hash)
@@ -227,11 +231,14 @@
                            (Wasm.Run "shaders/shadercRelease.wasm" .params))
                       "shaders/tmp/shader.bin" (FS.Read :Bytes true)))]
          (->
+          ; TODO this is not good, should be tied to code but currently something is wrong when doing that
           (Clear .Shader-hash-parts)
           (self-hash) >> .Shader-hash-parts
           (str name) >> .Shader-hash-parts
           "0.1" >> .Shader-hash-parts
+          (if (contains? _args "--entity") (get _args "--entity") "") >> .Shader-hash-parts
           .Shader-hash-parts (Log) (Hash.Keccak-256) (ToBase58) >= .shader-hash
+
           "cache/web-shaders/" (PrependTo .shader-hash)
           (sc varying vs-code "v") >> .web-shaders
           (sc varying fs-code "f") >> .web-shaders
