@@ -1,0 +1,102 @@
+; SPDX-License-Identifier: BUSL-1.1
+; Copyright © 2021 Fragcolor Pte. Ltd.
+
+(def width "512")
+(def height "512")
+(def remote-storage "https://img.fragments.foundation")
+; our geth node
+;; (def node-http "http://127.0.0.1:8545")
+; rinkeby
+(def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
+(def entity-contract "0x99e9522622bc33740005dca422c57e78bea996d2") ; MUSE BE LOWCASE
+
+;-----------------
+
+(def _args (eval `(assoc {} ~@*command-line-args*)))
+
+(def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")})
+
+(if (not (= platform "emscripten"))
+  (do
+    ; fix some incompatibilities with emscripten
+    (def _Emscripten.Eval Pass)
+    (def _Emscripten.EvalAsync Pass)))
+
+(def tmp-folder "tmp/")
+(def base-folder (str "user/" (get _parameters :rootFolder)))
+
+(def entity-abi (slurp (str "Entity.json")))
+(def frag-abi (slurp (str "Fragment.json")))
+
+(load-file (str "shared.edn"))
+
+(defnode main)
+
+(defchain produce-screenshot
+  (ExpectString) = .requestedId
+
+  node-http = .current-rpc-server
+
+  .requestedId (BigInt) (BigInt.ToBytes) = .bid
+  [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) = .callData
+  (__eth-call entity-contract .callData node-http)
+  (Eth.DecodeCall entity-abi "getData")
+  (Take 0) (ExpectBytes) (ToBase58) = .env-hash
+
+  [.requestedId entity-contract .env-hash] (Hash.Keccak-256) (ToBase58) >= .cname
+  ".png" (AppendTo .cname)
+
+  "cache/img/" >= .fpath
+  .cname (AppendTo .fpath)
+
+  .fpath (FS.IsFile)
+  (When (Is true) (Stop))
+
+  "entry.edn" >> .args
+  "--entity" >> .args
+  entity-contract (HexToBytes) (ToBase58) >> .args
+  "--entity-id" >> .args
+  .requestedId >> .args
+  "--gateway" >> .args
+  node-http >> .args
+  "--windowWidth" >> .args
+  width >> .args
+  "--windowHeight" >> .args
+  height >> .args
+  "--screenshot" >> .args
+
+  .cname >> .args
+  "--screenshotDelay" >> .args
+  "2.0" >> .args
+  .args (Log)
+  "" (Process.Run *cbl* .args :Timeout 20)
+
+  .fpath (FS.Read :Bytes true) = .payload
+
+  {"key" (slurp "preview-key.txt")
+   "name" .cname
+   "payload" .payload} (ToBytes)
+  (Http.Post remote-storage) (Log))
+
+(defchain runner
+  [] (Eth.EncodeCall entity-abi "totalSupply") (ToHex) >= .callData
+  (__eth-call entity-contract .callData node-http)
+  (Eth.DecodeCall entity-abi "totalSupply")
+  (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) = .n-entities (Log "Total")
+  ;
+  0 >= .current-id
+  (Sequence .ids :Types Type.String)
+  (Repeat
+   (->
+    (Math.Inc .current-id)
+    .current-id (ToString) (Do produce-screenshot)
+    ;; >> .ids
+    )
+   :Times .n-entities)
+  ; So basically we cannot do this in parallel because we hack some crap inside tmp folder and it will be overwritten
+  ; TODO fix this
+  ;; .ids (Log) (TryMany produce-screenshot WaitUntil.SomeSuccess 5 10)
+  )
+
+(schedule main runner)
+(run main)
