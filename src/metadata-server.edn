@@ -201,7 +201,8 @@
          (| (Take 5) = .mblock)
 
          [] (Eth.EncodeCall entity-abi "getFragment") (ToHex) >= .callData
-         (__eth-call .entityContract .callData (get _parameters :gatewayURL))
+         (__eth-call .entityContract .callData .current-rpc-server)
+         (Log)
          (Eth.DecodeCall entity-abi "getFragment")
          (Take 0) (ExpectBytes) >= .fragment-hash (Slice :From 12) > .fragment-hash
 
