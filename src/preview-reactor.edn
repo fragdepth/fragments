@@ -12,7 +12,7 @@
 ; rinkeby
 (def node-ws "wss://rinkeby.infura.io/ws/v3/f1f1f88885f54de7955ce248e1d69046")
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
-(def entity-contract "0x503dae3179510569269ed6e8173a01cbe0769454") ; MUSE BE LOWCASE
+(def entity-contract "0x99e9522622bc33740005dca422c57e78bea996d2") ; MUSE BE LOWCASE
 
 ;-----------------
 
