@@ -67,7 +67,7 @@
 
   .cname >> .args
   "--screenshotDelay" >> .args
-  "2.0" >> .args
+  "1.0" >> .args
   .args (Log)
   "" (Process.Run *cbl* .args :Timeout 20)
 
