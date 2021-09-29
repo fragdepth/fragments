@@ -55,17 +55,8 @@
       (metamask-call fragments .call)
       (Log "upload-entity"))
 
-    (defchain runtime-setter
-      runtime (FromBase58) (Slice :From 2) (Log) = .runtime
-      [.runtime]
-      (Eth.EncodeCall fragment-abi "setIpfsRuntime")
-      (ToHex) >= .call
-      (metamask-call fragments .call)
-      (Log "setIpfsRuntime-fragment"))
-
     (schedule main fragment-minter)
-    (schedule main entity-minter)
-    (schedule main runtime-setter))
+    (schedule main entity-minter))
   (do
     ; file passed as argument
     (defchain store-file
