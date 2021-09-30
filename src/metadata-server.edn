@@ -258,21 +258,21 @@
           (-> (ExpectString))
           (-> "No description")) >= .description
 
-         "<br /><br />Created by [" (AppendTo .description)
+         "  \r\n\r\nCreated by [" (AppendTo .description)
          .fragment-creator (Slice :To 4) (AppendTo .description)
          ".." (AppendTo .description)
          .fragment-creator (Slice :From -2) (AppendTo .description)
          "](https://opensea.io/" (AppendTo .description)
          .fragment-creator (AppendTo .description)
          ")" (AppendTo .description)
-         "<br />Fragment owned by [" (AppendTo .description)
+         "  \r\nFragment owned by [" (AppendTo .description)
          .fragment-owner (Slice :To 4) (AppendTo .description)
          ".." (AppendTo .description)
          .fragment-owner (Slice :From -2) (AppendTo .description)
          "](https://opensea.io/" (AppendTo .description)
          .fragment-owner (AppendTo .description)
          ")" (AppendTo .description)
-         "<br />Powered by [Fragcolor](https://fragcolor.com)" (AppendTo .description)
+         "  \r\nPowered by [Fragcolor](https://fragcolor.com)" (AppendTo .description)
 
          ; json response
          {"name" .name
