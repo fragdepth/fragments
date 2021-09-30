@@ -1,5 +1,6 @@
 ; SPDX-License-Identifier: BUSL-1.1
-; Copyright © 2021 Fragcolor Pte. Ltd.
+; Copyright (c) 2021 Fragdepth Inc.
+; Based on code licensed by Fragcolor Pte. Ltd.
 
 (def _args (if (empty? *command-line-args*) {} (read-string (first *command-line-args*))))
 
@@ -7,7 +8,7 @@
 (def uint256-max "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 (def include-cost uint256-max) ; uint256 max - don't allow inclusion
 (def entity-amount 1)
-(def fragments "0xa55e752986a5a676b9b529bcd8288c55eacecc00")
+(def fragments "0xa55e75cae979f8f2f88afbe649dcfe5a1d525711")
 (def runtime "QmQRRM5c7uQaPMYG3XEWDzVbPawuLc3c4ZoFHm92GAWMk5")
 
 ; contracts abis

@@ -1,5 +1,6 @@
 ; SPDX-License-Identifier: BUSL-1.1
-; Copyright © 2021 Fragcolor Pte. Ltd.
+; Copyright (c) 2021 Fragdepth Inc.
+; Based on code licensed by Fragcolor Pte. Ltd.
 
 ; parameters
 (def fragment-hash (slurp "../src/tmp/live-chain-eth-id"))
@@ -31,7 +32,7 @@
   [.fragmentHash token-name token-symbol unique can-update .maxSupply]
   (Eth.EncodeCall fragment-abi "rez")
   (ToHex) >= .call
-  (metamask-call "0xa55e752986a5a676b9b529bcd8288c55eacecc00" .call)
+  (metamask-call "0xa55e75cae979f8f2f88afbe649dcfe5a1d525711" .call)
   (Log "Call Input"))
 
 (defchain delegate
