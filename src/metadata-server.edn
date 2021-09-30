@@ -258,14 +258,14 @@
           (-> (ExpectString))
           (-> "No description")) >= .description
 
-         "  \r\n\r\nCreated by [" (AppendTo .description)
+         "  \r\n\r\nCreator: [" (AppendTo .description)
          .fragment-creator (Slice :To 4) (AppendTo .description)
          ".." (AppendTo .description)
          .fragment-creator (Slice :From -2) (AppendTo .description)
          "](https://opensea.io/" (AppendTo .description)
          .fragment-creator (AppendTo .description)
          ")" (AppendTo .description)
-         "  \r\nFragment owned by [" (AppendTo .description)
+         "  \r\nFragment owner: [" (AppendTo .description)
          .fragment-owner (Slice :To 4) (AppendTo .description)
          ".." (AppendTo .description)
          .fragment-owner (Slice :From -2) (AppendTo .description)
