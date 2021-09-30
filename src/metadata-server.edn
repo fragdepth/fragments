@@ -213,6 +213,12 @@
          (Eth.DecodeCall entity-abi "fragmentOwner")
          (Take 0) (ExpectString) = .fragment-owner
 
+         [.fragment-hash] (Eth.EncodeCall frag-abi "creatorOf") (ToHex) >= .callData
+         (__eth-call fragments .callData .current-rpc-server)
+         (Log)
+         (Eth.DecodeCall frag-abi "creatorOf")
+         (Take 0) (ExpectString) = .fragment-creator
+
          {"block-number" .mblock
           "frag-hash" .mutableHash
           "expected-to" .entityContract} (Log) (Do fetch-block-data-entity) (Take 0)
@@ -252,7 +258,12 @@
           (-> (ExpectString))
           (-> "No description")) >= .description
 
-         "\r\n\r\nFragment of [" (AppendTo .description)
+         "\r\n\r\nCreated by [" (AppendTo .description)
+         .fragment-creator (AppendTo .description)
+         "](https://opensea.io/" (AppendTo .description)
+         .fragment-owner (AppendTo .description)
+         ")" (AppendTo .description)
+         "\r\nFragment owned by [" (AppendTo .description)
          .fragment-owner (AppendTo .description)
          "](https://opensea.io/" (AppendTo .description)
          .fragment-owner (AppendTo .description)

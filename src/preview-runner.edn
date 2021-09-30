@@ -8,7 +8,7 @@
 ;; (def node-http "http://127.0.0.1:8545")
 ; rinkeby
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
-(def entity-contract "0x99e9522622bc33740005dca422c57e78bea996d2") ; MUSE BE LOWCASE
+(def entity-contract "0x691331acc0318034827d9a07028d0201b82a57c8") ; MUSE BE LOWCASE
 
 ;-----------------
 
