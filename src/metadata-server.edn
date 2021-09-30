@@ -169,7 +169,7 @@
          (If
           (IsNotNone)
           (-> (ExpectString))
-          (-> "No description")) = .description
+          (-> "No description")) >= .description
 
          ; json response
          {"name" .name
@@ -205,6 +205,12 @@
          (Log)
          (Eth.DecodeCall entity-abi "getFragment")
          (Take 0) (ExpectBytes) >= .fragment-hash (Slice :From 12) > .fragment-hash
+
+         [] (Eth.EncodeCall entity-abi "fragmentOwner") (ToHex) >= .callData
+         (__eth-call .entityContract .callData .current-rpc-server)
+         (Log)
+         (Eth.DecodeCall entity-abi "fragmentOwner")
+         (Take 0) (ExpectString) = .fragment-owner
 
          {"block-number" .mblock
           "frag-hash" .mutableHash
@@ -243,7 +249,14 @@
          (If
           (IsNotNone)
           (-> (ExpectString))
-          (-> "No description")) = .description
+          (-> "No description")) >= .description
+
+         "\r\n\r\nFragment of [" (AppendTo .description)
+         .fragment-owner (AppendTo .description)
+         "](https://opensea.io/" (AppendTo .description)
+         .fragment-owner (AppendTo .description)
+         ")" (AppendTo .description)
+         "\r\nPowered by [Fragcolor](https://fragcolor.com)" (AppendTo .description)
 
          ; json response
          {"name" .name

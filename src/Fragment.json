@@ -902,6 +902,26 @@
         "internalType": "uint160",
         "name": "fragmentHash",
         "type": "uint160"
+      }
+    ],
+    "name": "creatorOf",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint160",
+        "name": "fragmentHash",
+        "type": "uint160"
       },
       {
         "internalType": "address",

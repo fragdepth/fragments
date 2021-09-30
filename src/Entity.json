@@ -58,19 +58,6 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "total",
-        "type": "uint256"
-      }
-    ],
-    "name": "Earned",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": true,
         "internalType": "address",
         "name": "from",
@@ -103,25 +90,6 @@
       }
     ],
     "name": "Updated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "first",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "last",
-        "type": "uint256"
-      }
-    ],
-    "name": "Upload",
     "type": "event"
   },
   {
@@ -692,6 +660,20 @@
   {
     "inputs": [],
     "name": "getLibrary",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "getVault",
     "outputs": [
       {
         "internalType": "address",
