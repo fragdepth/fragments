@@ -104,8 +104,8 @@
         (->
          .match
          (set-rpc-server)
-         (| (Take 2) (HexToBytes) (ToBase58) = .fragmentId)
-         (| (Take 3) (HexToBytes) (ToBase58) = .mutableHash)
+         (| (Take 2) (BigInt) (BigInt.ToBytes 160) (ToBase58) = .fragmentId)
+         (| (Take 3) (BigInt) (BigInt.ToBytes 256) (ToBase58) = .mutableHash)
          (| (Take 4) = .includeCost (BigInt) (BigInt.ToString) = .includeCostString)
          (| (Take 5) = .iblock)
          (| (Take 6) = .mblock)
@@ -195,9 +195,11 @@
         (->
          .match
          (set-rpc-server)
-         (| (Take 2) (BigInt) (BigInt.ToString) = .entityId)
-         (| (Take 3) = .entityContract (HexToBytes) (ToBase58) = .b58Contract)
-         (| (Take 4) (HexToBytes) (ToBase58) = .mutableHash)
+         (| (Take 2) (BigInt) (BigInt.ToBytes 160) (BigInt.ToString) = .entityId)
+         (| (Take 3) (BigInt) (BigInt.ToBytes 160)
+            (| (ToHex) = .entityContract)
+            (| (ToBase58) = .b58Contract))
+         (| (Take 4) (BigInt) (BigInt.ToBytes 256) (ToBase58) = .mutableHash)
          (| (Take 5) = .mblock)
 
          [] (Eth.EncodeCall entity-abi "getFragment") (ToHex) >= .callData
