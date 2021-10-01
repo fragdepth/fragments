@@ -271,7 +271,7 @@
          "](https://opensea.io/" (AppendTo .description)
          .fragment-owner (AppendTo .description)
          ")" (AppendTo .description)
-         "<br />Powered by [Fragcolor](https://fragcolor.com)" (AppendTo .description)
+         "  \r\nPowered by [Fragcolor](https://fragcolor.com)" (AppendTo .description)
 
          ; json response
          {"name" .name
