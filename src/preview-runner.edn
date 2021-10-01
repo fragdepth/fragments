@@ -50,33 +50,33 @@
   .cname (AppendTo .fpath)
 
   .fpath (FS.IsFile)
-  (When (Is true) (Stop))
+  (When (Is false)
+        (->
+         "entry.edn" >> .args
+         "--entity" >> .args
+         entity-contract (HexToBytes) (ToBase58) >> .args
+         "--entity-id" >> .args
+         .requestedId >> .args
+         "--gateway" >> .args
+         node-http >> .args
+         "--windowWidth" >> .args
+         width >> .args
+         "--windowHeight" >> .args
+         height >> .args
+         "--screenshot" >> .args
 
-  "entry.edn" >> .args
-  "--entity" >> .args
-  entity-contract (HexToBytes) (ToBase58) >> .args
-  "--entity-id" >> .args
-  .requestedId >> .args
-  "--gateway" >> .args
-  node-http >> .args
-  "--windowWidth" >> .args
-  width >> .args
-  "--windowHeight" >> .args
-  height >> .args
-  "--screenshot" >> .args
+         .cname >> .args
+         "--screenshotDelay" >> .args
+         "1.0" >> .args
+         .args (Log)
+         "" (Process.Run *cbl* .args :Timeout 20)
 
-  .cname >> .args
-  "--screenshotDelay" >> .args
-  "1.0" >> .args
-  .args (Log)
-  "" (Process.Run *cbl* .args :Timeout 20)
+         .fpath (FS.Read :Bytes true) = .payload
 
-  .fpath (FS.Read :Bytes true) = .payload
-
-  {"key" (slurp "preview-key.txt")
-   "name" .cname
-   "payload" .payload} (ToBytes)
-  (Http.Post remote-storage) (Log))
+         {"key" (slurp "preview-key.txt")
+          "name" .cname
+          "payload" .payload} (ToBytes)
+         (Http.Post remote-storage) (Log))))
 
 (defchain runner
   [] (Eth.EncodeCall entity-abi "totalSupply") (ToHex) >= .callData
