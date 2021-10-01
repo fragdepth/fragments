@@ -98,5 +98,20 @@
   ;; .ids (Log) (TryMany produce-screenshot WaitUntil.SomeSuccess 5 10)
   )
 
+(defchain purge-cache-list
+  "\r\n" >= .list
+  "cache/img" (FS.Iterate)
+  (ForEach (->
+
+            (| (str remote-storage "/") >= .url)
+            (AppendTo .url)
+            "\r\n" (AppendTo .url)
+            .url (AppendTo .list)))
+  .list (Log))
+
+; schedule chains
 (schedule main runner)
+(schedule main purge-cache-list)
+
+; run everything
 (run main)
