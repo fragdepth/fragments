@@ -24,7 +24,8 @@
 
 (def _args (eval `(assoc {} ~@*command-line-args*)))
 
-(def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")})
+(def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")
+                  :refreshMetadata (if (contains? _args "--refreshMetadata") (read-string (get _args "--refreshMetadata")) false)})
 
 (if (not (= platform "emscripten"))
   (do
@@ -101,14 +102,15 @@
   ;;                         "Content-Type" "application/json"})
   ;;    (Log "Cloudflare purge")))
 
-  ;; ; trigger OS cache refresh
-  ;; open-sea-api >= .opensea-req
-  ;; (str  entity-contract "/") (AppendTo .opensea-req)
-  ;; .requestedId (AppendTo .opensea-req)
-  ;; "/?force_update=true" (AppendTo .opensea-req)
-  ;; nil (Http.Get .opensea-req) (Log)
-  ;
-  )
+  ; trigger OS cache refresh
+  (if (get _parameters :refreshMetadata)
+    (->
+     open-sea-api >= .opensea-req
+     (str  entity-contract "/") (AppendTo .opensea-req)
+     .requestedId (AppendTo .opensea-req)
+     "/?force_update=true" (AppendTo .opensea-req)
+     nil (Http.Get .opensea-req) (Log)
+     (Pause 1.0))))
 
 (defchain runner
   [] (Eth.EncodeCall entity-abi "totalSupply") (ToHex) >= .callData
