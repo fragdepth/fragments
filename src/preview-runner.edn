@@ -4,8 +4,8 @@
 (def width "512")
 (def height "512")
 (def remote-storage "https://img.fragments.foundation")
-; our geth node
-;; (def node-http "http://127.0.0.1:8545")
+; mainnet
+;; (def node-http "https://cloudflare-eth.com")
 ; rinkeby
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 (def entity-contract "0x99e9522622bc33740005dca422c57e78bea996d2") ; MUSE BE LOWCASE
@@ -18,6 +18,7 @@
     (def cloudflare-key (slurp "cloudflare-key"))))
 
 ; remove rinkeby for mainnet
+;; (def open-sea-api "https://api.opensea.io/asset/")
 (def open-sea-api "https://rinkeby-api.opensea.io/asset/")
 
 ;-----------------
