@@ -83,14 +83,16 @@
          "--screenshotDelay" >> .args
          "1.0" >> .args
          .args (Log)
-         "" (Process.Run *cbl* .args :Timeout 20)
+         (Maybe
+          (->
+           "" (Process.Run *cbl* .args :Timeout 20)
 
-         .fpath (FS.Read :Bytes true) = .payload
+           .fpath (FS.Read :Bytes true) = .payload
 
-         {"key" (slurp "preview-key.txt")
-          "name" .cname
-          "payload" .payload} (ToBytes)
-         (Http.Post remote-storage) (Log)))
+           {"key" (slurp "preview-key.txt")
+            "name" .cname
+            "payload" .payload} (ToBytes)
+           (Http.Post remote-storage) (Log)))))
 
   ; purge cache from cloudflare
   (if (not (= "" cloudflare-zone))
