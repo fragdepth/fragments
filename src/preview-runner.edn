@@ -10,6 +10,16 @@
 (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 (def entity-contract "0x691331acc0318034827d9a07028d0201b82a57c8") ; MUSE BE LOWCASE
 
+; for cloudflare
+(def cloudflare-zone "")
+(if (not (= "" cloudflare-zone))
+  (do
+    (def cloudflare-email (slurp "cloudflare-email"))
+    (def cloudflare-key (slurp "cloudflare-key"))))
+
+; remove rinkeby for mainnet
+(def open-sea-api "https://rinkeby-api.opensea.io/asset/")
+
 ;-----------------
 
 (def _args (eval `(assoc {} ~@*command-line-args*)))
@@ -45,6 +55,7 @@
 
   [.requestedId entity-contract .env-hash] (Hash.Keccak-256) (ToBase58) >= .cname
   ".png" (AppendTo .cname)
+  .cname >= .cache-name
 
   "cache/img/" >= .fpath
   .cname (AppendTo .fpath)
@@ -76,7 +87,28 @@
          {"key" (slurp "preview-key.txt")
           "name" .cname
           "payload" .payload} (ToBytes)
-         (Http.Post remote-storage) (Log))))
+         (Http.Post remote-storage) (Log)))
+
+  ;; ; purge cache from cloudflare
+  ;; (if (not (= "" cloudflare-zone))
+  ;;   (->
+  ;;    (str remote-storage "/") (PrependTo .cache-name)
+  ;;    .cache-name >> .purge-files
+  ;;    {"files" .purge-files} (ToJson) (Log "Cloudflare request")
+  ;;    (Http.Post (str "https://api.cloudflare.com/client/v4/zones/" cloudflare-zone "/purge_cache")
+  ;;               :Headers {"X-Auth-Email" cloudflare-email
+  ;;                         "X-Auth-Key" cloudflare-key
+  ;;                         "Content-Type" "application/json"})
+  ;;    (Log "Cloudflare purge")))
+
+  ;; ; trigger OS cache refresh
+  ;; open-sea-api >= .opensea-req
+  ;; (str  entity-contract "/") (AppendTo .opensea-req)
+  ;; .requestedId (AppendTo .opensea-req)
+  ;; "/?force_update=true" (AppendTo .opensea-req)
+  ;; nil (Http.Get .opensea-req) (Log)
+  ;
+  )
 
 (defchain runner
   [] (Eth.EncodeCall entity-abi "totalSupply") (ToHex) >= .callData
