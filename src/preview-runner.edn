@@ -101,7 +101,8 @@
      (Http.Post (str "https://api.cloudflare.com/client/v4/zones/" cloudflare-zone "/purge_cache")
                 :Headers {"Authorization" cloudflare-key
                           "Content-Type" "application/json"})
-     (Log "Cloudflare purge")))
+     (Log "Cloudflare purge")
+     (Pause 1.0)))
 
   ; trigger OS cache refresh
   (if (get _parameters :refreshMetadata)
@@ -111,7 +112,7 @@
      .requestedId (AppendTo .opensea-req)
      "/?force_update=true" (AppendTo .opensea-req)
      nil (Http.Get .opensea-req) (Log)
-     (Pause 1.0))))
+     (if (= "" cloudflare-zone) (Pause 1.0)))))
 
 (defchain runner
   [] (Eth.EncodeCall entity-abi "totalSupply") (ToHex) >= .callData
