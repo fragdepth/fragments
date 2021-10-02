@@ -21,8 +21,7 @@
 (def cloudflare-zone (get _parameters :zone))
 (if (not (= "" cloudflare-zone))
   (do
-    (def cloudflare-email (slurp "cloudflare-email"))
-    (def cloudflare-key (slurp "cloudflare-key"))))
+    (def cloudflare-key (str "Bearer " (slurp "cloudflare-key")))))
 
 ; remove rinkeby for mainnet
 ;; (def open-sea-api "https://api.opensea.io/asset/")
@@ -100,10 +99,10 @@
      .cache-name >> .purge-files
      {"files" .purge-files} (ToJson) (Log "Cloudflare request")
      (Http.Post (str "https://api.cloudflare.com/client/v4/zones/" cloudflare-zone "/purge_cache")
-                :Headers {"X-Auth-Email" cloudflare-email
-                          "X-Auth-Key" cloudflare-key
+                :Headers {"Authorization" cloudflare-key
                           "Content-Type" "application/json"})
-     (Log "Cloudflare purge")))
+     (Log "Cloudflare purge")
+     (Pause 1.0)))
 
   ; trigger OS cache refresh
   (if (get _parameters :refreshMetadata)
@@ -113,7 +112,7 @@
      .requestedId (AppendTo .opensea-req)
      "/?force_update=true" (AppendTo .opensea-req)
      nil (Http.Get .opensea-req) (Log)
-     (Pause 1.0))))
+     (if (= "" cloudflare-zone) (Pause 1.0)))))
 
 (defchain runner
   [] (Eth.EncodeCall entity-abi "totalSupply") (ToHex) >= .callData
