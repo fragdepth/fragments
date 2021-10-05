@@ -104,7 +104,7 @@
         (->
          .match
          (set-rpc-server)
-         (| (Take 2) (BigInt) (BigInt.ToBytes 160) (ToBase58) = .fragmentId)
+         (| (Take 2) (BigInt) (BigInt.ToBytes 160) = .fragment-hash (ToBase58) = .fragmentId)
          (| (Take 3) (BigInt) (BigInt.ToBytes 256) (ToBase58) = .mutableHash)
          (| (Take 4) = .includeCost (BigInt) (BigInt.ToString) = .includeCostString)
          (| (Take 5) = .iblock)
@@ -157,9 +157,9 @@
          ; include cost attribute
          .includeCost
          (If (IsNot uint256-max)
-             (-> {"trait_type" "Stake to include"
+             (-> {"trait_type" "stake to include"
                   "value" .includeCostString})
-             (-> {"trait_type" "Stake to include"
+             (-> {"trait_type" "stake to include"
                   "value" "Unavailable"}))  >> .attribs
 
          (find-attributes)
@@ -170,6 +170,20 @@
           (IsNotNone)
           (-> (ExpectString))
           (-> "No description")) >= .description
+
+         [.fragment-hash] (Eth.EncodeCall frag-abi "creatorOf") (ToHex) >= .callData
+         (__eth-call fragments .callData .current-rpc-server)
+         (Log)
+         (Eth.DecodeCall frag-abi "creatorOf")
+         (Take 0) (ExpectString) = .fragment-creator
+
+         "  \r\n\r\nCreator: [" (AppendTo .description)
+         .fragment-creator (Slice :To 4) (AppendTo .description)
+         ".." (AppendTo .description)
+         .fragment-creator (Slice :From -2) (AppendTo .description)
+         "](https://opensea.io/" (AppendTo .description)
+         .fragment-creator (AppendTo .description)
+         ")" (AppendTo .description)
 
          ; json response
          {"name" .name
