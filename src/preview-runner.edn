@@ -12,9 +12,9 @@
 (def height "512")
 (def remote-storage "https://img.fragments.foundation")
 ; mainnet
-;; (def node-http "https://cloudflare-eth.com")
+(def node-http "http://10.7.11.1:8545")
 ; rinkeby
-(def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
+;; (def node-http "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 (def entity-contract "0x691331acc0318034827d9a07028d0201b82a57c8") ; MUSE BE LOWCASE
 
 ; for cloudflare
@@ -24,8 +24,8 @@
     (def cloudflare-key (str "Bearer " (slurp "cloudflare-key")))))
 
 ; remove rinkeby for mainnet
-;; (def open-sea-api "https://api.opensea.io/asset/")
-(def open-sea-api "https://rinkeby-api.opensea.io/asset/")
+(def open-sea-api "https://api.opensea.io/asset/")
+;; (def open-sea-api "https://rinkeby-api.opensea.io/asset/")
 
 ;-----------------
 
@@ -154,8 +154,8 @@
 ; run everything
 (run main)
 
-; schedule chains
-(schedule main purge-cache-list)
+;; ; schedule chains
+;; (schedule main purge-cache-list)
 
-; run everything
-(run main)
+;; ; run everything
+;; (run main)

@@ -23,7 +23,8 @@
 
 (load-file (str "shared.edn"))
 
-(def main-rpc "https://cloudflare-eth.com")
+;; (def main-rpc "https://cloudflare-eth.com")
+(def main-rpc "https://mainnet.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 (def rinkeby-rpc "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 (def goerli-rpc "https://goerli.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")
 
