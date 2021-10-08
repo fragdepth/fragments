@@ -1,6 +1,8 @@
 ; SPDX-License-Identifier: BUSL-1.1
 ; Copyright © 2021 Fragcolor Pte. Ltd.
 
+(def eth-cache-server "https://eth-cache.fragments.foundation/")
+
 ; utility to run chains inline
 (defn loop-chain [chain]
   (if (tick chain) (loop-chain chain) nil))
@@ -154,38 +156,46 @@
    hash = .b58-fragment-hash ; used in a shared path with entity loading
    ; TODO, check isReferencedBy
    (Maybe
-    (->
+    (-> ; LOCAL CACHE
      ; TODO, decide how to flag cached content for update after a mutation happened
      (ReadFile (str "cache/frag/" hash))
      (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
-    (->
-     ; download worst case scenario
-     (get _parameters :gatewayURL) = .current-rpc-server
-     hash (Log "Downloading")
-     hash (FromBase58) >> .hashBytes
-     .hashBytes (Eth.EncodeCall frag-abi "dataOf") (ToHex) >= .callData
-     (__eth-call fragments .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall frag-abi "dataOf")
-     (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
-     (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
-     (| (Take 2) (ExpectBytes) (ToBase58) = .env-hash)
+    (-> ; TRY REMOTE CACHE IF FAILS DIRECT ETH RPCS
+     (Maybe
+      (->
+       ; TODO, decide how to flag cached content for update after a mutation happened
+       eth-cache-server >= .eth-cache-req
+       hash (AppendTo .eth-cache-req)
+       nil (Http.Get .eth-cache-req :Bytes true) (FromBytes)
+       (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
+      (->
+       ; download worst case scenario
+       (get _parameters :gatewayURL) = .current-rpc-server
+       hash (Log "Downloading")
+       hash (FromBase58) >> .hashBytes
+       .hashBytes (Eth.EncodeCall frag-abi "dataOf") (ToHex) >= .callData
+       (__eth-call fragments .callData (get _parameters :gatewayURL))
+       (Eth.DecodeCall frag-abi "dataOf")
+       (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
+       (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
+       (| (Take 2) (ExpectBytes) (ToBase58) = .env-hash)
      ; fetch block with immutable data
-     {"block-number" .immutable-block
-      "frag-hash" hash
-      "expected-to" fragments} (Do fetch-block-data-upload) = .first-result
-     .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
-                        (-> .first-result)
-                        (->
-                         (Msg "Downloading updated environment")
-                         .first-result (Take 0) >> .new-result
-                         {"block-number" .mutable-block
-                          "frag-hash" .env-hash
-                          "expected-to" fragments} (Do fetch-block-data-update) (Take 0) >> .new-result
-                         .new-result)) (Set .frag-result "data")
-     .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
-     (__eth-call fragments .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
-     .frag-result (WriteFile (str "cache/frag/" hash) :Flush true))
+       {"block-number" .immutable-block
+        "frag-hash" hash
+        "expected-to" fragments} (Do fetch-block-data-upload) = .first-result
+       .mutable-block (If (Is "0x00") ; 0x00 means no data mutation happened
+                          (-> .first-result)
+                          (->
+                           (Msg "Downloading updated environment")
+                           .first-result (Take 0) >> .new-result
+                           {"block-number" .mutable-block
+                            "frag-hash" .env-hash
+                            "expected-to" fragments} (Do fetch-block-data-update) (Take 0) >> .new-result
+                           .new-result)) (Set .frag-result "data")
+       .hashBytes (Eth.EncodeCall frag-abi "ownerOf") (ToHex) > .callData
+       (__eth-call fragments .callData (get _parameters :gatewayURL))
+       (Eth.DecodeCall frag-abi "ownerOf") (Take 0) (ExpectString) (Set .frag-result "owner")
+       .frag-result (WriteFile (str "cache/frag/" hash) :Flush true))))
     :Silent true)))
 
 (defn load-file-chain [hash bytes]
@@ -295,42 +305,50 @@
      (ExpectBytesSeq)
      (| (Take 2) (ToBase58) > .b58-fragment-hash))
     (->
-     contract (FromBase58) (ToHex) = .contract-address
+     (Maybe
+      (->
+       eth-cache-server >= .eth-cache-req
+       (str "cache/entity/" contract "-" id) (AppendTo .eth-cache-req)
+       nil (Http.Get .eth-cache-req :Bytes true) (FromBytes)
+       (ExpectBytesSeq)
+       (| (Take 2) (ToBase58) > .b58-fragment-hash))
+      (->
+       contract (FromBase58) (ToHex) = .contract-address
      ; download worst case scenario
-     (get _parameters :gatewayURL) = .current-rpc-server
+       (get _parameters :gatewayURL) = .current-rpc-server
      ; check if this contract is official if not crash
-     [] (Eth.EncodeCall entity-abi "getLibrary") (ToHex) >= .callData
-     (__eth-call .contract-address .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall entity-abi "getLibrary")
-     (Take 0) (ExpectString) (Assert.Is fragments true)
+       [] (Eth.EncodeCall entity-abi "getLibrary") (ToHex) >= .callData
+       (__eth-call .contract-address .callData (get _parameters :gatewayURL))
+       (Eth.DecodeCall entity-abi "getLibrary")
+       (Take 0) (ExpectString) (Assert.Is fragments true)
 
      ; fetch fragment hash
-     [] (Eth.EncodeCall entity-abi "getFragment") (ToHex) > .callData
-     (__eth-call .contract-address .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall entity-abi "getFragment")
-     (Take 0) (ExpectBytes) >= .fragment-hash (Slice :From 12) > .fragment-hash (ToBase58) > .b58-fragment-hash
-     [.fragment-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
-     (__eth-call fragments .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall frag-abi "dataOf")
-     (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
+       [] (Eth.EncodeCall entity-abi "getFragment") (ToHex) > .callData
+       (__eth-call .contract-address .callData (get _parameters :gatewayURL))
+       (Eth.DecodeCall entity-abi "getFragment")
+       (Take 0) (ExpectBytes) >= .fragment-hash (Slice :From 12) > .fragment-hash (ToBase58) > .b58-fragment-hash
+       [.fragment-hash] (Eth.EncodeCall frag-abi "dataOf") (ToHex) > .callData
+       (__eth-call fragments .callData (get _parameters :gatewayURL))
+       (Eth.DecodeCall frag-abi "dataOf")
+       (| (Take 0) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .immutable-block)
      ; fetch block with immutable data
-     {"block-number" .immutable-block
-      "frag-hash" .b58-fragment-hash
-      "expected-to" fragments} (Do fetch-block-data-upload) >= .first-result
+       {"block-number" .immutable-block
+        "frag-hash" .b58-fragment-hash
+        "expected-to" fragments} (Do fetch-block-data-upload) >= .first-result
 
      ; NFT actual data associated with id
-     id (BigInt) (BigInt.ToBytes) = .bid
-     [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) > .callData
-     (__eth-call .contract-address .callData (get _parameters :gatewayURL))
-     (Eth.DecodeCall entity-abi "getData")
-     (| (Take 0) (ExpectBytes) (ToBase58) = .env-hash)
-     (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
-     {"block-number" .mutable-block
-      "frag-hash" .env-hash
-      "expected-to" .contract-address} (Do fetch-block-data-entity) (Take 0) = .entity-data
-     [1 .entity-data] (Assoc .first-result)
-     .fragment-hash (Push .first-result :Clear false)
-     .first-result (WriteFile (str "cache/entity/" contract "-" id) :Flush true))
+       id (BigInt) (BigInt.ToBytes) = .bid
+       [.bid] (Eth.EncodeCall entity-abi "getData") (ToHex) > .callData
+       (__eth-call .contract-address .callData (get _parameters :gatewayURL))
+       (Eth.DecodeCall entity-abi "getData")
+       (| (Take 0) (ExpectBytes) (ToBase58) = .env-hash)
+       (| (Take 1) (ExpectBytes) (BigInt) (BigInt.ToInt) (ToHex) = .mutable-block)
+       {"block-number" .mutable-block
+        "frag-hash" .env-hash
+        "expected-to" .contract-address} (Do fetch-block-data-entity) (Take 0) = .entity-data
+       [1 .entity-data] (Assoc .first-result)
+       .fragment-hash (Push .first-result :Clear false)
+       .first-result (WriteFile (str "cache/entity/" contract "-" id) :Flush true))))
     :Silent true)))
 
 (defchain ugly-shader
