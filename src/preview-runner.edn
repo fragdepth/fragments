@@ -6,7 +6,7 @@
 (def _parameters {:rootFolder (if (contains? _args "--rootFolder") (get _args "--rootFolder") "")
                   :refreshMetadata (if (contains? _args "--refreshMetadata") (read-string (get _args "--refreshMetadata")) false)
                   :from (if (contains? _args "--from") (read-string (get _args "--from")) 0)
-                  :zone (if (contains? _args "--zone") (read-string (get _args "--zone")) "")})
+                  :zone (if (contains? _args "--zone") (get _args "--zone") "")})
 
 (def width "512")
 (def height "512")
@@ -64,35 +64,33 @@
   .cname (AppendTo .fpath)
 
   .fpath (FS.IsFile)
-  (When (Is false)
-        (->
-         "entry.edn" >> .args
-         "--entity" >> .args
-         entity-contract (HexToBytes) (ToBase58) >> .args
-         "--entity-id" >> .args
-         .requestedId >> .args
-         "--gateway" >> .args
-         node-http >> .args
-         "--windowWidth" >> .args
-         width >> .args
-         "--windowHeight" >> .args
-         height >> .args
-         "--screenshot" >> .args
-
-         .cname >> .args
-         "--screenshotDelay" >> .args
-         "1.0" >> .args
-         .args (Log)
-         (Maybe
-          (->
-           "" (Process.Run *cbl* .args :Timeout 20)
-
-           .fpath (FS.Read :Bytes true) = .payload
-
-           {"key" (slurp "preview-key.txt")
-            "name" .cname
-            "payload" .payload} (ToBytes)
-           (Http.Post remote-storage) (Log)))))
+  (When
+   (Is false)
+   (->
+    "entry.edn" >> .args
+    "--entity" >> .args
+    entity-contract (HexToBytes) (ToBase58) >> .args
+    "--entity-id" >> .args
+    .requestedId >> .args
+    "--gateway" >> .args
+    node-http >> .args
+    "--windowWidth" >> .args
+    width >> .args
+    "--windowHeight" >> .args
+    height >> .args
+    "--screenshot" >> .args
+    .cname >> .args
+    "--screenshotDelay" >> .args
+    "1.0" >> .args
+    .args (Log)
+    (Maybe
+     (->
+      "" (Process.Run *cbl* .args :Timeout 20)
+      .fpath (FS.Read :Bytes true) = .payload
+      {"key" (slurp "preview-key.txt")
+       "name" .cname
+       "payload" .payload} (ToBytes)
+      (Http.Post remote-storage) (Log)))))
 
   ; purge cache from cloudflare
   (if (not (= "" cloudflare-zone))
