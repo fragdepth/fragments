@@ -29,8 +29,6 @@
              (Http.SendFile :Headers headers))))]))
 
 (defloop img-server
-  (Setup
-   key (Log "key"))
   (Http.Server handler :Port port))
 
 (schedule main img-server)
