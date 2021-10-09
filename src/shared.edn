@@ -1,7 +1,7 @@
 ; SPDX-License-Identifier: BUSL-1.1
 ; Copyright © 2021 Fragcolor Pte. Ltd.
 
-(def eth-cache-server "https://eth-cache.fragments.foundation/")
+(def cache-server "https://cache.fragments.foundation/")
 
 ; utility to run chains inline
 (defn loop-chain [chain]
@@ -164,9 +164,9 @@
      (Maybe
       (->
        ; TODO, decide how to flag cached content for update after a mutation happened
-       eth-cache-server >= .eth-cache-req
-       hash (AppendTo .eth-cache-req)
-       nil (Http.Get .eth-cache-req :Bytes true) (FromBytes)
+       cache-server >= .frag-cache-req
+       hash (AppendTo .frag-cache-req)
+       nil (Http.Get .frag-cache-req :Bytes true) (FromBytes)
        (ExpectLike {"data" [(Bytes "") (Bytes "")] "owner" ""} :Unsafe true))
       (->
        ; download worst case scenario
@@ -299,17 +299,21 @@
 (defn __entity-load-cached [contract id]
   (->
    "" >= .b58-fragment-hash
+   "cache/frag/" >= .cache-file
+   (str contract id (get _parameters :gatewayURL))
+   (Hash.Keccak-256) (ToBase58) = .entity-hash
+   (AppendTo .cache-file)
    (Maybe
     (->
-     (ReadFile (str "cache/entity/" contract "-" id))
+     (ReadFile .cache-file)
      (ExpectBytesSeq)
      (| (Take 2) (ToBase58) > .b58-fragment-hash))
     (->
      (Maybe
       (->
-       eth-cache-server >= .eth-cache-req
-       (str "cache/entity/" contract "-" id) (AppendTo .eth-cache-req)
-       nil (Http.Get .eth-cache-req :Bytes true) (FromBytes)
+       cache-server >= .ent-cache-req
+       .entity-hash (AppendTo .ent-cache-req)
+       nil (Http.Get .ent-cache-req :Bytes true) (FromBytes)
        (ExpectBytesSeq)
        (| (Take 2) (ToBase58) > .b58-fragment-hash))
       (->
@@ -348,7 +352,7 @@
         "expected-to" .contract-address} (Do fetch-block-data-entity) (Take 0) = .entity-data
        [1 .entity-data] (Assoc .first-result)
        .fragment-hash (Push .first-result :Clear false)
-       .first-result (WriteFile (str "cache/entity/" contract "-" id) :Flush true))))
+       .first-result (WriteFile .cache-file :Flush true))))
     :Silent true)))
 
 (defchain ugly-shader

@@ -3,7 +3,6 @@
 
 (def _args (eval `(assoc {} ~@*command-line-args*)))
 (def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
-(def key (slurp "preview-key.txt"))
 
 (def headers {"Access-Control-Allow-Origin" "*"})
 
@@ -17,14 +16,14 @@
   .method
   (Match
    ["GET" (->
-           "cache/web-shaders/" (PrependTo .target)
+           "cache/frag/" (PrependTo .target)
            .target (FS.IsFile)
            (If
             (Is false)
             (->
              ; TODO
-             ; compile shader, targeting emscripten, store it and serve it
-             "Shader not found" (Http.Response :Status 404))
+             ; retreive from infura, cache it and at same time serve it
+             "Fragment not found" (Http.Response :Status 404))
             (->
              "/" (PrependTo .target) ; needed by sendfile
              .target
