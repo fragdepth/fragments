@@ -21,13 +21,12 @@
            (If
             (Is false)
             (->
-             ; TODO
-             ; retreive from infura, cache it and at same time serve it
-             "Fragment not found" (Http.Response :Status 404))
+             "Cache entry not found" (Http.Response :Status 404))
             (->
              "/" (PrependTo .target) ; needed by sendfile
              .target
-             (Log "sending") (Http.SendFile :Headers headers))))]))
+             (Log "Sending cache entry")
+             (Http.SendFile :Headers headers))))]))
 
 (defloop img-server
   (Setup
