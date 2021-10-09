@@ -300,7 +300,7 @@
   (->
    "" >= .b58-fragment-hash
    "cache/frag/" >= .cache-file
-   (str contract id (get _parameters :gatewayURL))
+   (str contract id (get _parameters :chainId))
    (Hash.Keccak-256) (ToBase58) = .entity-hash
    (AppendTo .cache-file)
    (Maybe
