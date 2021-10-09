@@ -17,7 +17,7 @@
 (def Canvas-Height (get _parameters :windowHeight))
 (def XR? (get _parameters :xrSupported))
 (def identity identity)
-(def shaders-server "https://shaders-cache.fragments.foundation/")
+(def shaders-server "https://cache.fragments.foundation/")
 
 ; utility to crypto verify bytes
 (defn verify-bytes-hash [type kkhash]
@@ -152,15 +152,14 @@
         hash (nth file 1)]
     (dl-func hash (if (empty? full) false (first full)))))
 
-(defn shader-hash-caching []
+(defn shader-hash-caching [name var vs fs]
   (->
    ; TODO this is not good, should be tied to code but currently something is wrong when doing that
    (Clear .Shader-hash-parts)
-   (self-hash) >> .Shader-hash-parts
-   (str name) >> .Shader-hash-parts
+   var (Regex.Replace #"\r" "") >> .Shader-hash-parts
+   vs (Regex.Replace #"\r" "") >> .Shader-hash-parts
+   fs (Regex.Replace #"\r" "") >> .Shader-hash-parts
    "0.1" >> .Shader-hash-parts
-   (if (contains? _args "--entity") (get _args "--entity") "") >> .Shader-hash-parts
-   (get _parameters :gatewayURL) >> .Shader-hash-parts
    .Shader-hash-parts (Hash.Keccak-256) (ToBase58)))
 
 (if (= platform "emscripten")
@@ -175,7 +174,7 @@
                   varying >> .Shader-args
                   vs-code >> .Shader-args
                   fs-code >> .Shader-args
-                  (shader-hash-caching) >= .shader-hash
+                  (shader-hash-caching name varying vs-code fs-code) >= .shader-hash
                   (Get .shaders-cache hash :Default 0)
                   (If
                    (IsNot .shader-hash)
@@ -234,7 +233,7 @@
                            (Wasm.Run "shaders/shadercRelease.wasm" .params))
                       "shaders/tmp/shader.bin" (FS.Read :Bytes true)))]
          (->
-          (shader-hash-caching) >= .shader-hash
+          (shader-hash-caching name varying vs-code fs-code) >= .shader-hash
           "cache/frag/" (PrependTo .shader-hash)
           (sc varying vs-code "v") >> .web-shaders
           (sc varying fs-code "f") >> .web-shaders

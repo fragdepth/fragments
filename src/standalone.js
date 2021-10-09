@@ -114,7 +114,7 @@ async function reloadCBL() {
   const args = (() => {
     const gateway = (() => {
       if (chainId == 1) {
-        return "https://cloudflare-eth.com";
+        return "https://mainnet.infura.io/v3/f1f1f88885f54de7955ce248e1d69046";
       } else if (chainId == 4) {
         return "https://rinkeby.infura.io/v3/f1f1f88885f54de7955ce248e1d69046";
       } else if (chainId == 5) {
