@@ -154,12 +154,11 @@
 
 (defn shader-hash-caching [name var vs fs]
   (->
-   ; TODO this is not good, should be tied to code but currently something is wrong when doing that
    (Clear .Shader-hash-parts)
    var (Regex.Replace #"\r" "") >> .Shader-hash-parts
    vs (Regex.Replace #"\r" "") >> .Shader-hash-parts
    fs (Regex.Replace #"\r" "") >> .Shader-hash-parts
-   "0.1" >> .Shader-hash-parts
+   "0.1" >> .Shader-hash-parts ; still add a version so to be able to invalidate
    .Shader-hash-parts (Hash.Keccak-256) (ToBase58)))
 
 (if (= platform "emscripten")

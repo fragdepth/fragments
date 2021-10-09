@@ -26,6 +26,7 @@
                   :screenshot (if (contains? _args "--screenshot") (get _args "--screenshot") nil)
                   :screenshotDelay (if (contains? _args "--screenshotDelay") (read-string (get _args "--screenshotDelay")) 2.0)
                   :compileWebShaders (if (contains? _args "--compileWebShaders") (read-string (get _args "--compileWebShaders")) false)
+                  :chainId (if (contains? _args "--chainId") (get _args "--chainId") "0x1") ; we don't use this really except for hashing/caching
                   :gatewayURL (if (contains? _args "--gateway") (get _args "--gateway") "https://mainnet.infura.io/v3/f1f1f88885f54de7955ce248e1d69046")})
 
 (if (not (= platform "emscripten"))
