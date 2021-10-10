@@ -87,7 +87,7 @@
      (->
       "" (Process.Run *cbl* .args :Timeout 20)
       .fpath (FS.Read :Bytes true) = .payload
-      {"key" (slurp "preview-key.txt")
+      {"key" (slurp "../secrets/preview-key.txt")
        "name" .cname
        "payload" .payload} (ToBytes)
       (Http.Post remote-storage) (Log)))))

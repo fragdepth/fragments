@@ -3,7 +3,7 @@
 
 (def _args (eval `(assoc {} ~@*command-line-args*)))
 (def port (if (contains? _args "--port") (read-string (get _args "--port")) 7070))
-(def key (slurp "preview-key.txt"))
+(def key (slurp "../secrets/preview-key.txt"))
 
 (defnode main)
 
