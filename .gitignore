@@ -22,5 +22,4 @@ utility/*.png
 utility/preview.svg
 preview-key.txt
 runtime-key.txt
-src/cloudflare-email
-src/cloudflare-key
+cloudflare-key.txt
