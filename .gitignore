@@ -20,7 +20,7 @@ src/CBlocks
 .DS_Store
 utility/*.png
 utility/preview.svg
-src/preview-key.txt
-src/runtime-key.txt
+preview-key.txt
+runtime-key.txt
 src/cloudflare-email
 src/cloudflare-key
