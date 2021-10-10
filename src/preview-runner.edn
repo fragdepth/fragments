@@ -22,7 +22,8 @@
 (def cloudflare-zone (get _parameters :zone))
 (if (not (= "" cloudflare-zone))
   (do
-    (def cloudflare-key (str "Bearer " (slurp "../secrets/cloudflare-key.txt")))))
+    (def cloudflare-key (str "Bearer " (slurp "../secrets/cloudflare-key.txt")))
+    (println (str "cloudflare-key: " cloudflare-key))))
 
 ; remove rinkeby for mainnet
 (def open-sea-api "https://api.opensea.io/asset/")
